@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ótica Vanglauss - Óculos de Qualidade | Experimente Virtualmente</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- ============ NAVBAR ============ -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-logo">
+        <span class="logo-main">Ótica</span><span class="logo-accent">Vanglauss</span>
+      </div>
+
+      <ul class="navbar-menu">
+        <li><a href="#inicio" class="nav-link">Início</a></li>
+        <li><a href="#oculos" class="nav-link">Óculos</a></li>
+        <li><a href="#sobre" class="nav-link">Sobre nós</a></li>
+        <li><a href="#contato" class="nav-link">Contato</a></li>
+      </ul>
+
+      <div class="navbar-actions">
+        <div class="search-box">
+          <input id="product-search" type="search" placeholder="Buscar..." class="search-input" />
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+        </div>
+        <button class="btn-highlight" type="button" aria-label="Experimentar virtualmente">
+          Experimentar
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============ MAIN CONTENT ============ -->
+  <main class="main">
+    <div class="container">
+
+      <!-- ============ HERO SECTION ============ -->
+      <section class="hero" id="inicio">
+        <div class="hero-content">
+          <h1 class="hero-title">Encontre o estilo que combina com você</h1>
+          <p class="hero-subtitle">Óculos de qualidade com design moderno e elegante para o seu visual único</p>
+          <div class="hero-buttons">
+            <button class="btn-primary btn-large">Ver coleção</button>
+            <button class="btn-secondary btn-large">Experimente virtualmente</button>
+          </div>
+        </div>
+        <div class="hero-image">
+          <div class="hero-placeholder">
+            <span>Imagem de destaque</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FILTROS E BUSCA ============ -->
+      <section class="filters-section" id="oculos">
+        <div class="filters-header">
+          <h2 class="section-title">Nossos Óculos</h2>
+          <p class="section-subtitle">Explore nossa coleção de óculos exclusivos</p>
+        </div>
+
+        <div class="filters-controls">
+          <div class="filter-group">
+            <label for="category-filter">Categoria:</label>
+            <select id="category-filter" class="filter-select" aria-label="Filtrar por categoria">
+              <option value="all">Todos</option>
+              <option value="solar">Óculos de Sol</option>
+              <option value="grau">Óculos de Grau</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="gender-filter">Gênero:</label>
+            <select id="gender-filter" class="filter-select" aria-label="Filtrar por gênero">
+              <option value="all">Todos</option>
+              <option value="masculino">Masculino</option>
+              <option value="feminino">Feminino</option>
+              <option value="unissex">Unissex</option>
+              <option value="infantil">Infantil</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="brand-filter">Marca:</label>
+            <select id="brand-filter" class="filter-select" aria-label="Filtrar por marca">
+              <option value="all">Todas</option>
+              <option value="vanglauss">Vanglauss</option>
+              <option value="ray-ban">Ray-Ban</option>
+              <option value="oakley">Oakley</option>
+              <option value="vogue">Vogue</option>
+              <option value="prada">Prada</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CATÁLOGO DE ÓCULOS ============ -->
+      <section class="products-section">
+        <div id="produtos" class="products-grid"></div>
+      </section>
+
+      <!-- ============ SOBRE NÓS ============ -->
+      <section class="about-section" id="sobre">
+        <div class="about-content">
+          <h2 class="section-title">Sobre a Ótica Vanglauss</h2>
+          <p class="about-text">
+            A Ótica Vanglauss é sinônimo de qualidade, elegância e atendimento premium. 
+            Com uma tradição de excelência no segmento óptico, oferecemos as melhores marcas 
+            e modelos de óculos para todos os estilos e necessidades.
+          </p>
+          <p class="about-text">
+            Nosso compromisso é proporcionar uma experiência única aos nossos clientes, 
+            desde a escolha do modelo perfeito até o atendimento pós-venda dedicado.
+            Cada cliente é especial para nós.
+          </p>
+          <div class="about-features">
+            <div class="feature-card">
+              <div class="feature-icon">👓</div>
+              <h3>Marcas Premium</h3>
+              <p>As melhores marcas internacionais</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">✨</div>
+              <h3>Estilo Moderno</h3>
+              <p>Designs elegantes e contemporâneos</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🎯</div>
+              <h3>Atendimento Personalizado</h3>
+              <p>Cuidado especial com cada cliente</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🚀</div>
+              <h3>Provador Virtual</h3>
+              <p>Experimente antes de comprar</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CONTATO ============ -->
+      <section class="contact-section" id="contato">
+        <h2 class="section-title">Visite-nos</h2>
+        <div class="contact-content">
+          <div class="contact-info">
+            <div class="contact-item">
+              <div class="contact-icon">📍</div>
+              <h3>Localização</h3>
+              <p>Av. Francisco Glicério, 189<br/>Santos, São Paulo 11065-401<br/>Brasil</p>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">📞</div>
+              <h3>Contato</h3>
+              <p>WhatsApp: <a href="https://wa.me/5513999985388" target="_blank">(13) 99998-5388</a></p>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">⏰</div>
+              <h3>Horários</h3>
+              <p>Segunda a Sexta: 09h às 18h<br/>Sábado: 09h às 13h<br/>Domingo: Fechado</p>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">📱</div>
+              <h3>Redes Sociais</h3>
+              <p><a href="https://instagram.com/oticavanglauss" target="_blank">@oticavanglauss</a></p>
+            </div>
+          </div>
+          <div class="contact-actions">
+            <button class="btn-primary btn-large" onclick="openWhatsApp()">
+              Falar no WhatsApp
+            </button>
+            <button class="btn-secondary btn-large" onclick="openMaps()">
+              Ver localização
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============ PRODUCT DETAIL MODAL ============ -->
+  <div id="product-modal" class="modal" aria-hidden="true">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <button class="modal-close" aria-label="Fechar modal">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div class="modal-body">
+        <div class="product-detail-image">
+          <img id="detail-image" src="" alt="Imagem do produto" />
+        </div>
+        <div class="product-detail-info">
+          <h2 id="detail-name" class="detail-name"></h2>
+          <p id="detail-brand" class="detail-brand"></p>
+          <div class="detail-rating">⭐⭐⭐⭐⭐ (12 avaliações)</div>
+          <p id="detail-description" class="detail-description"></p>
+          <div class="detail-specs">
+            <div class="spec-item">
+              <span class="spec-label">Categoria:</span>
+              <span id="detail-category" class="spec-value"></span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Gênero:</span>
+              <span id="detail-gender" class="spec-value"></span>
+            </div>
+          </div>
+          <div class="detail-price">
+            <span id="detail-price" class="price"></span>
+          </div>
+          <div class="detail-actions">
+            <button class="btn-primary btn-full" onclick="openTryOn()">
+              Experimentar Virtualmente
+            </button>
+            <button class="btn-secondary btn-full" onclick="contactViasWhatsApp()">
+              Entrar em Contato
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VIRTUAL TRY-ON ============ -->
+  <div id="tryon-modal" class="modal" aria-hidden="true">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-tryon">
+      <button class="modal-close" aria-label="Fechar câmera">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div class="tryon-container">
+        <div class="tryon-camera">
+          <video id="camera-feed" autoplay playsinline></video>
+          <canvas id="face-canvas"></canvas>
+          <div class="tryon-controls">
+            <button class="btn-secondary" data-camera-toggle onclick="toggleCamera()">Ativar Câmera</button>
+            <button class="btn-primary" onclick="capturePhoto()">Capturar Foto</button>
+          </div>
+        </div>
+        <div class="tryon-sidebar">
+          <h3>Modelos Disponíveis</h3>
+          <div id="tryon-models" class="tryon-models"></div>
+          <div class="tryon-instructions">
+            <p>💡 Dica: Posicione seu rosto de frente para a câmera para melhores resultados</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>Ótica Vanglauss</h4>
+        <p>Qualidade e elegância em cada óculos</p>
+      </div>
+      <div class="footer-section">
+        <h4>Links Rápidos</h4>
+        <ul>
+          <li><a href="#inicio">Início</a></li>
+          <li><a href="#oculos">Óculos</a></li>
+          <li><a href="#sobre">Sobre nós</a></li>
+          <li><a href="#contato">Contato</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Contato</h4>
+        <p>WhatsApp: <a href="https://wa.me/5513999985388">(13) 99998-5388</a></p>
+        <p>Instagram: <a href="https://instagram.com/oticavanglauss">@oticavanglauss</a></p>
+      </div>
+      <div class="footer-section">
+        <h4>Horários</h4>
+        <p>Seg-Sex: 09h às 18h<br/>Sábado: 09h às 13h</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Ótica Vanglauss. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- ============ TOAST NOTIFICATIONS ============ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
