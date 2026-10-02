@@ -20,107 +20,71 @@ const CONFIG = {
   }
 };
 
-/* ---------- DADOS DOS PRODUTOS ----------
-   Estrutura de cada item — mantenha este formato ao adicionar novos óculos:
-   {
-     id: número único,
-     nome, marca, categoria: 'solar' | 'grau', genero: 'masculino'|'feminino'|'unissex'|'infantil',
-     preco: number,
-     imagem: foto principal do card/detalhe,
-     imagens: [opcional] galeria de fotos do produto,
-     imagemProvador: PNG com fundo transparente para o provador (frontal),
-     provadorAngulos: [opcional] { esquerda, frontal, direita } — PNGs por ângulo
-     descricao
-   }
-   ATENÇÃO: os produtos abaixo (preços, descrições, algumas imagens via
-   placeholder) são DADOS DE TESTE e precisam ser substituídos pelos
-   dados reais da loja antes da publicação.
------------------------------------------------- */
-const produtos = [
-  {
-    id: 1,
-    nome: 'Óculos Teste 1',
-    marca: 'Vanglauss',
-    categoria: 'solar',
-    genero: 'unissex',
-    preco: 349.90,
-    imagem: 'img/oculos-t-1.jpg',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Modelo de teste com design moderno e confortável, ideal para o dia a dia.'
-  },
-  {
-    id: 7,
-    nome: 'Óculos Teste 2',
-    marca: 'Vanglauss',
-    categoria: 'solar',
-    genero: 'unissex',
-    preco: 399.90,
-    imagem: 'img/oculos-t-2-1.png',
-    imagens: ['img/oculos-t-2-1.png', 'img/oculos-t-2-2.png', 'img/oculos-t-2-3.png'],
-    imagemProvador: 'img/oculos-t-2-provador.png',
-    modelo3D: 'img/oculos-t-2.glb',
-    descricao: 'Óculos solar metálico com lentes degradê e design contemporâneo.'
-  },
-  {
-    id: 2,
-    nome: 'Vogue VO5436 Feminino',
-    marca: 'Vogue',
-    categoria: 'grau',
-    genero: 'feminino',
-    preco: 459.90,
-    imagem: 'https://via.placeholder.com/600x600/f5f2ec/6b675f?text=Vogue+VO5436',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Armação fashion com design sofisticado, perfeita para uso diário.'
-  },
-  {
-    id: 3,
-    nome: 'Oakley Holbrook',
-    marca: 'Oakley',
-    categoria: 'solar',
-    genero: 'masculino',
-    preco: 499.90,
-    imagem: 'https://via.placeholder.com/600x600/f5f2ec/6b675f?text=Oakley+Holbrook',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Óculos de sol esportivo com tecnologia Plutonite e armação resistente.'
-  },
-  {
-    id: 4,
-    nome: 'Prada VPR12W',
-    marca: 'Prada',
-    categoria: 'grau',
-    genero: 'feminino',
-    preco: 799.90,
-    imagem: 'https://via.placeholder.com/600x600/f5f2ec/6b675f?text=Prada+VPR12W',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Óculos de grau premium com design italiano refinado.'
-  },
-  {
-    id: 5,
-    nome: 'Ray-Ban Wayfarer',
-    marca: 'Ray-Ban',
-    categoria: 'solar',
-    genero: 'feminino',
-    preco: 369.90,
-    imagem: 'https://via.placeholder.com/600x600/f5f2ec/6b675f?text=Ray-Ban+Wayfarer',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Clássico icônico com armação em acetato de inspiração vintage.'
-  },
-  {
-    id: 6,
-    nome: 'Infantil Divertido',
-    marca: 'Vanglauss Kids',
-    categoria: 'solar',
-    genero: 'infantil',
-    preco: 179.90,
-    imagem: 'https://via.placeholder.com/600x600/f5f2ec/6b675f?text=Infantil',
-    imagemProvador: 'img/oculos-t-1-provador.png',
-    descricao: 'Óculos infantil leve, resistente e com proteção UV400.'
-  }
+/* ---------- CATÁLOGO DE PRODUTOS ---------- */
+const modelosCatalogo = [
+  [1, 'BG7618', 'Solar BG7618', 'VG', 'solar', 'unissex', 'Tamanho 50; armação de metal; lentes cinza.'],
+  [2, 'H00135', 'Solar H00135', 'VG', 'solar', 'unissex', 'Tamanho 56; armação de metal; lentes cinza polarizadas.'],
+  [3, 'SDM2018', 'Solar SDM2018', 'OXFOUR LUX', 'solar', 'masculino', 'Tamanho 60; armação de metal; lentes azuis polarizadas.'],
+  [4, 'LQ-2002', 'Solar LQ 2002', 'VG', 'solar', 'masculino', 'Tamanho único; armação TR90; lentes cinza.'],
+  [5, 'JC-84026', 'Solar JC 84026', 'VG', 'solar', 'masculino', 'Tamanho 56; modelo esportivo; lentes cinza polarizadas.'],
+  [6, 'JC-1201', 'Clip-on JC 1201', 'VG', 'grau', 'masculino', 'Tamanho 54; armação TR90; clip-on com lentes cinza polarizadas.'],
+  [7, 'OM2511', 'Clip-on OM2511', 'VG', 'grau', 'masculino', 'Tamanho 56; armação de alumínio; clip-on com lentes cinza polarizadas.'],
+  [8, 'HG59008', 'Nylon HG59008', 'VG', 'grau', 'masculino', 'Tamanho 55; armação de alumínio na cor azul.'],
+  [9, 'ZY5902', 'Metal Nylon ZY5902', 'VG', 'grau', 'masculino', 'Tamanho 55; armação preta.'],
+  [10, 'HR-MM-1007', 'Metal fechado HR-MM-1007', 'OXFOUR LUX', 'grau', 'masculino', 'Tamanho 59; armação na cor grafite.'],
+  [11, 'HG59012', 'Alumínio fechado HG59012', 'VG', 'grau', 'masculino', 'Tamanho 56; armação de alumínio na cor azul.'],
+  [12, '91226', 'Alumínio fechado 91226', 'VG', 'grau', 'masculino', 'Tamanho 60; armação de alumínio cinza fosco.'],
+  [13, '59213', 'Metal fechado 59213', 'VG', 'grau', 'masculino', 'Tamanho 52; armação verde; hastes de alumínio.'],
+  [14, 'SL1795', 'Balgrif SL1795', 'Balgrif', 'grau', 'unissex', 'Tamanho 53; armação bronze; hastes de alumínio.'],
+  [15, 'ISA163', 'Metal Nylon ISA163', 'VG', 'grau', 'masculino', 'Tamanho 58; armação preta.'],
+  [16, '5845', 'Metal Nylon 5845', 'VG', 'grau', 'masculino', 'Tamanho 47; armação prata; hastes de alumínio.'],
+  [17, 'J31086', 'Metal fechado J31086', 'VG', 'grau', 'masculino', 'Tamanho 57; armação cinza fosco.'],
+  [18, 'HL-8002', 'Metal fechado HL 8002', 'VG', 'grau', 'masculino', 'Tamanho 59; armação cinza.'],
+  [19, 'ULF-7713', 'Acetato fechado ULF 7713', 'VG', 'grau', 'masculino', 'Tamanho 54; armação azul.'],
+  [20, 'ISA-3260', 'Acetato fechado ISA 3260', 'VG', 'grau', 'masculino', 'Tamanho 54; armação azul.'],
+  [21, 'BW9003', 'TR90 BW9003', 'VG', 'grau', 'unissex', 'Tamanho 52; armação cinza.'],
+  [22, 'T91220', 'Acetato fechado T91220', 'VG', 'grau', 'masculino', 'Tamanho 56; armação preta.'],
+  [23, 'BR-77109', 'Acetato fechado BR 77109', 'VG', 'grau', 'masculino', 'Tamanho 54; armação cinza.'],
+  [24, 'LH-1013', 'Acetato fechado LH 1013', 'VG', 'grau', 'masculino', 'Tamanho 52; armação azul.'],
+  [25, 'SDA-3018', 'Solar SDA 3018', 'Kazualy Lux', 'solar', 'feminino', 'Tamanho 55; armação de acetato tartaruga; lentes cinza degradê polarizadas.'],
+  [26, 'ZS-1162', 'Solar ZS 1162', 'VG', 'solar', 'feminino', 'Tamanho único; armação de acetato verde; lentes cinza.'],
+  [27, 'XW-79', 'Solar XW 79', 'VG', 'solar', 'feminino', 'Tamanho 54; armação de acetato tartaruga; lentes na cor doce.'],
+  [28, 'OM-50412', 'Solar OM 50412', 'VG', 'solar', 'feminino', 'Tamanho 49; armação de acetato tartaruga; lentes marrom degradê.'],
+  [29, 'YY-6131', 'Clip-on YY 6131', 'VG', 'grau', 'feminino', 'Tamanho 53; armação de acetato bordô; clip-on com lentes cinza.'],
+  [30, 'LQC0347', 'Clip-on LQC0347', 'VG', 'grau', 'feminino', 'Tamanho 53; armação de acetato marrom; clip-on com lentes marrons.'],
+  [31, 'ISA61019', 'Metal ISA61019', 'VG', 'grau', 'feminino', 'Tamanho 51; armação rosa claro.'],
+  [32, 'R-20573', 'Metal Nylon R 20573', 'VG', 'grau', 'feminino', 'Tamanho 55; armação dourada.'],
+  [33, 'ISA-17027', 'Metal ISA 17027', 'VG', 'grau', 'feminino', 'Tamanho 53; armação preta.'],
+  [34, 'BR-22353', 'Metal BR 22353', 'VG', 'grau', 'feminino', 'Tamanho 52; armação dourada.'],
+  [35, 'HL-5004', 'Balgrif HL 5004', 'Balgrif', 'grau', 'feminino', 'Tamanho 52; armação dourada.'],
+  [36, '5096', 'Metal 5096', 'VG', 'grau', 'feminino', 'Tamanho 52; armação preta.'],
+  [37, 'BX96045', 'Metal BX96045', 'VG', 'grau', 'feminino', 'Tamanho 52; armação dourada de titânio.'],
+  [38, 'BW-9062', 'Acetato BW 9062', 'VG', 'grau', 'feminino', 'Tamanho 48; armação na cor uva.'],
+  [39, 'LG1025', 'Acetato LG1025', 'VG', 'grau', 'feminino', 'Tamanho 52; armação marrom.'],
+  [40, 'BR-98363', 'Acetato BR 98363', 'VG', 'grau', 'feminino', 'Tamanho 51; armação tartaruga.'],
+  [41, 'ISA-3210', 'Acetato ISA 3210', 'VG', 'grau', 'feminino', 'Tamanho 53; armação cinza e azul.'],
+  [42, 'YY-4411', 'Acetato YY 4411', 'VG', 'grau', 'feminino', 'Tamanho 52; armação azul claro.'],
+  [43, 'HF-3317', 'Acetato HF 3317', 'VG', 'grau', 'feminino', 'Tamanho 55; armação tartaruga.'],
+  [44, 'HR-Z-805', 'Acetato HR Z 805', 'Kazualy Lux', 'grau', 'feminino', 'Tamanho 47; armação cinza.'],
+  [45, 'BW-9004', 'Acetato BW 9004', 'VG', 'grau', 'feminino', 'Tamanho 51; armação bordô.'],
+  [46, 'HR-2910', 'Acetato HR-2910', 'Kazualy Lux', 'grau', 'feminino', 'Tamanho 55; armação nude.'],
+  [47, 'HR-Z-658', 'Acetato HR-Z 658', 'Kazualy Lux', 'grau', 'feminino', 'Tamanho 52.'],
+  [48, 'LG-1017', 'Acetato LG 1017', 'VG', 'grau', 'feminino', 'Tamanho 54; armação tartaruga.'],
+  [49, 'HR-Z870', 'Acetato HR Z870', 'Kazualy Lux', 'grau', 'feminino', 'Tamanho 52; armação preta.'],
+  [50, '68675', 'Acetato 68675', 'VG', 'grau', 'feminino', 'Tamanho 49; armação caramelo.']
 ];
 
-// Marcas em destaque na home. Placeholders claramente identificados —
-// substitua pelos logos/nomes reais das marcas trabalhadas pela loja.
-const marcasDestaque = ['Vanglauss', 'Ray-Ban', 'Oakley', 'Vogue', 'Prada'];
+const quantidadeFotosExtra = { 6: 4, 7: 4, 29: 4, 30: 4 };
+const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
+  const marcaArquivo = marca.toUpperCase().replace(/\s+/g, '-');
+  const quantidadeFotos = quantidadeFotosExtra[id] || 3;
+  const imagens = Array.from({ length: quantidadeFotos }, (_, indice) =>
+    `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.jpg`
+  );
+  return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao };
+});
+
+const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux', 'Balgrif'];
 
 /* ---------- ESTADO ---------- */
 const state = {
@@ -156,6 +120,7 @@ function cacheElements() {
 
 /* ---------- UTIL ---------- */
 function formatPrice(value) {
+  if (value == null) return 'Consulte valores';
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
@@ -243,10 +208,10 @@ function renderBrandsStrip() {
 function getFilteredProducts() {
   const termo = state.search.trim().toLowerCase();
   let lista = produtos.filter((p) => {
-    const nomeMatch = !termo || p.nome.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo);
+    const nomeMatch = !termo || p.nome.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo) || p.descricao.toLowerCase().includes(termo);
     const categoriaMatch = state.categoria === 'all' || p.categoria === state.categoria;
     const generoMatch = state.genero === 'all' || p.genero === state.genero;
-    const marcaMatch = state.marca === 'all' || p.marca.toLowerCase() === state.marca;
+    const marcaMatch = state.marca === 'all' || p.marca.toLowerCase().replace(/\s+/g, '-') === state.marca;
     return nomeMatch && categoriaMatch && generoMatch && marcaMatch;
   });
 
