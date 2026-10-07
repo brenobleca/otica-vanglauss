@@ -48,7 +48,7 @@
             <path d="m21 21-4.35-4.35"></path>
           </svg>
         </div>
-        <button class="btn-gold" type="button" data-open-tryon aria-label="Abrir provador virtual">Experimentar</button>
+        <button class="btn-gold" type="button" data-scroll-to="#oculos">Ver modelos</button>
         <button id="nav-toggle" class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navbar-menu">
           <span></span><span></span><span></span>
         </button>
@@ -66,11 +66,11 @@
         <p class="hero-subtitle">Encontre a armação que combina com você — e experimente virtualmente antes de decidir.</p>
         <div class="hero-buttons">
           <button class="btn-primary" type="button" data-scroll-to="#oculos">Ver nossos óculos</button>
-          <button class="btn-secondary" type="button" data-open-tryon>Experimentar virtualmente</button>
+          <button class="btn-secondary" type="button" data-scroll-to="#oculos">Escolher um modelo</button>
         </div>
       </div>
       <div class="hero-media">
-        <img src="img/oculos-t-2-1.png" alt="Pessoa utilizando óculos da Ótica Vanglauss" />
+        <img src="img/oculos-webp/28-VG-OM-50412-1.webp" alt="Óculos de sol em acetato tartaruga da coleção Vanglauss" />
       </div>
       <div class="hero-ring" aria-hidden="true"></div>
     </section>
@@ -139,6 +139,9 @@
     <section class="products-section">
       <div class="container">
         <div id="produtos" class="products-grid"></div>
+        <div class="catalog-more">
+          <button id="show-more-products" class="btn-secondary on-light" type="button" hidden>Ver mais modelos</button>
+        </div>
         <div id="empty-state" class="empty-state" hidden>
           <strong>Nenhum óculos encontrado</strong>
           <p>Tente ajustar os filtros ou buscar por outro termo.</p>
@@ -261,6 +264,7 @@
 
       <div class="tryon-header">
         <h2 id="tryon-title">Experimente virtualmente</h2>
+        <p id="tryon-product-name" class="tryon-product-name"></p>
         <p>Posicione seu rosto dentro da área indicada.</p>
       </div>
 
@@ -278,7 +282,6 @@
       </div>
 
       <div class="tryon-footer">
-        <div id="tryon-thumbs" class="tryon-thumbs" aria-label="Escolher armação"></div>
         <div class="tryon-actions">
           <button id="tryon-capture" class="btn-primary" type="button">Capturar foto</button>
         </div>
@@ -288,6 +291,7 @@
 
   <!-- ============ FOOTER ============ -->
   <footer class="footer">
+    <div class="footer-photo-banner" role="img" aria-label="Óculos de sol da coleção Vanglauss em fotografia de detalhe"></div>
     <div class="container">
       <div class="footer-content">
         <div class="footer-section">

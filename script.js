@@ -79,7 +79,7 @@ const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, gener
   const marcaArquivo = marca.toUpperCase().replace(/\s+/g, '-');
   const quantidadeFotos = quantidadeFotosExtra[id] || 3;
   const imagens = Array.from({ length: quantidadeFotos }, (_, indice) =>
-    `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.jpg`
+    `img/oculos-webp/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.webp`
   );
   return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao };
 });
@@ -92,7 +92,9 @@ const state = {
   categoria: 'all',
   genero: 'all',
   marca: 'all',
-  ordenar: 'relevancia'
+  ordenar: 'relevancia',
+  visibleCount: 8,
+  carouselTimer: null
 };
 
 let currentProduct = null;
@@ -112,6 +114,7 @@ function cacheElements() {
   el.brandFilter = document.getElementById('brand-filter');
   el.sortFilter = document.getElementById('sort-filter');
   el.clearFilters = document.getElementById('clear-filters');
+  el.showMore = document.getElementById('show-more-products');
   el.toastContainer = document.getElementById('toast-container');
   el.navToggle = document.getElementById('nav-toggle');
   el.navMenu = document.getElementById('navbar-menu');
@@ -241,6 +244,9 @@ function productCardTemplate(produto) {
           decoding="async"
           onerror="this.closest('.product-image-wrapper').classList.add('img-error'); this.style.display='none';"
         />
+        <button type="button" class="product-image-next" data-action="next-image" aria-label="Próxima foto de ${produto.nome}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+        </button>
         <div class="product-image-fallback" aria-hidden="true">Imagem indisponível</div>
       </div>
       <div class="product-content">
@@ -256,14 +262,13 @@ function productCardTemplate(produto) {
     </article>`;
 }
 
-function renderProducts() {
+function renderProducts(resetVisibleCount = true) {
   if (!el.produtos) return;
+  if (resetVisibleCount) state.visibleCount = 8;
   const lista = getFilteredProducts();
 
   if (el.resultsCount) {
-    el.resultsCount.textContent = lista.length === 1
-      ? '1 modelo encontrado'
-      : `${lista.length} modelos encontrados`;
+    el.resultsCount.textContent = `Mostrando ${Math.min(state.visibleCount, lista.length)} de ${lista.length} modelos`;
   }
   if (el.clearFilters) {
     el.clearFilters.hidden = !hasActiveFilters();
@@ -271,18 +276,45 @@ function renderProducts() {
 
   if (!lista.length) {
     el.produtos.innerHTML = '';
+    if (el.showMore) el.showMore.hidden = true;
+    if (state.carouselTimer) window.clearInterval(state.carouselTimer);
     if (el.emptyState) el.emptyState.hidden = false;
     return;
   }
   if (el.emptyState) el.emptyState.hidden = true;
 
-  el.produtos.innerHTML = lista.map(productCardTemplate).join('');
+  const produtosVisiveis = lista.slice(0, state.visibleCount);
+  el.produtos.innerHTML = produtosVisiveis.map(productCardTemplate).join('');
+  if (el.showMore) el.showMore.hidden = lista.length <= state.visibleCount;
+
+  if (state.carouselTimer) window.clearInterval(state.carouselTimer);
 
   el.produtos.querySelectorAll('.product-card').forEach((card) => {
     const id = Number(card.dataset.id);
+    const produto = produtos.find((item) => item.id === id);
+    const image = card.querySelector('.product-image');
+    let imageIndex = 0;
+    const showNextImage = () => {
+      if (!produto?.imagens?.length) return;
+      imageIndex = (imageIndex + 1) % produto.imagens.length;
+      image.src = produto.imagens[imageIndex];
+      image.alt = `${produto.nome} — ${produto.marca}, foto ${imageIndex + 1}`;
+    };
+    card.querySelector('[data-action="next-image"]')?.addEventListener('click', showNextImage);
     card.querySelector('[data-action="detail"]').addEventListener('click', () => showProductDetail(id, card));
     card.querySelector('[data-action="tryon"]').addEventListener('click', () => openTryOn(id, card));
   });
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    state.carouselTimer = window.setInterval(() => {
+      el.produtos.querySelectorAll('.product-card').forEach((card) => {
+        const bounds = card.getBoundingClientRect();
+        const isVisible = bounds.bottom > 0 && bounds.top < window.innerHeight;
+        if (!isVisible || !card.matches(':hover')) return;
+        card.querySelector('[data-action="next-image"]')?.click();
+      });
+    }, 5000);
+  }
 }
 
 function clearAllFilters() {
@@ -306,6 +338,10 @@ function setupFilters() {
   el.brandFilter?.addEventListener('change', (e) => { state.marca = e.target.value; renderProducts(); });
   el.sortFilter?.addEventListener('change', (e) => { state.ordenar = e.target.value; renderProducts(); });
   el.clearFilters?.addEventListener('click', clearAllFilters);
+  el.showMore?.addEventListener('click', () => {
+    state.visibleCount += 8;
+    renderProducts(false);
+  });
 }
 
 /* ---------- DETALHE DO PRODUTO ---------- */
@@ -400,7 +436,6 @@ function tryOnEls() {
     canvas: document.getElementById('face-canvas'),
     threeCanvas: document.getElementById('glasses-canvas'),
     status: document.getElementById('tryon-status'),
-    thumbs: document.getElementById('tryon-thumbs'),
     permissionPanel: document.getElementById('tryon-permission'),
     retryBtn: document.getElementById('tryon-retry'),
     captureBtn: document.getElementById('tryon-capture'),
@@ -415,31 +450,13 @@ function setTryOnStatus(message, kind = 'info') {
   status.dataset.kind = kind;
 }
 
-function openTryOn(productId = null, triggerEl = null) {
-  currentProduct = produtos.find((p) => p.id === productId) || currentProduct || produtos[0];
+function openTryOn(productId, triggerEl = null) {
+  currentProduct = produtos.find((p) => p.id === productId);
+  if (!currentProduct) return;
   closeModal('product-modal');
+  document.getElementById('tryon-product-name').textContent = currentProduct.nome;
   openModal('tryon-modal', triggerEl);
-  renderTryOnThumbs();
   startTryOn();
-}
-
-function renderTryOnThumbs() {
-  const { thumbs } = tryOnEls();
-  if (!thumbs) return;
-  thumbs.innerHTML = produtos.map((p) => `
-    <button type="button" class="tryon-thumb ${currentProduct?.id === p.id ? 'is-active' : ''}" data-id="${p.id}" aria-label="Experimentar ${p.nome}">
-      <img src="${p.imagem}" alt="" loading="lazy" onerror="this.style.opacity=0.15" />
-    </button>`).join('');
-  thumbs.querySelectorAll('.tryon-thumb').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      currentProduct = produtos.find((p) => p.id === Number(btn.dataset.id));
-      thumbs.querySelectorAll('.tryon-thumb').forEach((b) => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-      tryOn.smoothed = null;
-      loadOverlaysForCurrentProduct();
-      ensureThreeModel();
-    });
-  });
 }
 
 async function startTryOn() {
@@ -872,9 +889,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tryon-capture')?.addEventListener('click', capturePhoto);
   document.getElementById('tryon-retry')?.addEventListener('click', startTryOn);
 
-  document.querySelectorAll('[data-open-tryon]').forEach((btn) =>
-    btn.addEventListener('click', () => openTryOn())
-  );
   document.querySelectorAll('[data-scroll-to]').forEach((btn) =>
     btn.addEventListener('click', () => {
       document.querySelector(btn.dataset.scrollTo)?.scrollIntoView({ behavior: 'smooth' });
