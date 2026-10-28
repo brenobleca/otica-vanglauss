@@ -75,13 +75,53 @@ const modelosCatalogo = [
 ];
 
 const quantidadeFotosExtra = { 6: 4, 7: 4, 29: 4, 30: 4 };
+const fotosSemEtiqueta = {
+  1: [1, 2, 3],
+  2: [1, 2, 3],
+  3: [1, 2, 3],
+  4: [1, 2, 3],
+  5: [1, 2, 3],
+  6: [1, 2, 3, 4],
+  7: [1, 2, 3, 4],
+  8: [1, 2, 3],
+  9: [1, 2],
+  10: [2],
+  11: [2, 3],
+  12: [1, 2, 3],
+  13: [1, 2, 3, 4, 5, 6],
+  14: [1, 2, 3, 4, 6],
+  15: [1, 2, 3, 4, 5],
+  16: [1, 2, 3],
+  17: [1, 2, 3, 4],
+  18: [1, 2, 3],
+  19: [1, 2, 3, 4],
+  20: [1, 2, 3],
+  21: [1, 2, 3],
+  22: [1, 2, 3]
+};
+const assetsProvador = {
+  1: { modelo3D: 'img/modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
+  2: { imagemProvador: 'img/oculos-png/download (1).png' },
+  3: { imagemProvador: 'img/oculos-png/download (2).png' },
+  4: { imagemProvador: 'img/oculos-png/download (3).png' },
+  5: { imagemProvador: 'img/oculos-png/download (4).png' },
+  6: { imagemProvador: 'img/oculos-png/download (5).png' },
+  7: { imagemProvador: 'img/oculos-png/download (6).png' },
+  8: { imagemProvador: 'img/oculos-png/download (7).png' },
+  9: { imagemProvador: 'img/oculos-png/download (8).png' }
+};
 const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
   const marcaArquivo = marca.toUpperCase().replace(/\s+/g, '-');
   const quantidadeFotos = quantidadeFotosExtra[id] || 3;
-  const imagens = Array.from({ length: quantidadeFotos }, (_, indice) =>
-    `img/oculos-webp/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.webp`
-  );
-  return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao };
+  const indicesSemEtiqueta = fotosSemEtiqueta[id];
+  const imagens = indicesSemEtiqueta
+    ? indicesSemEtiqueta.map((indice) =>
+        `img/oculos-sem-etiqueta/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice}-SE.png`
+      )
+    : Array.from({ length: quantidadeFotos }, (_, indice) =>
+        `img/oculos-webp/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.webp`
+      );
+  return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
 });
 
 const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux', 'Balgrif'];
@@ -93,7 +133,8 @@ const state = {
   genero: 'all',
   marca: 'all',
   ordenar: 'relevancia',
-  visibleCount: 8,
+  visibleCount: 0,
+  hasExpandedCatalog: false,
   carouselTimer: null
 };
 
@@ -115,6 +156,7 @@ function cacheElements() {
   el.sortFilter = document.getElementById('sort-filter');
   el.clearFilters = document.getElementById('clear-filters');
   el.showMore = document.getElementById('show-more-products');
+  el.productsWrap = document.getElementById('products-grid-wrap');
   el.toastContainer = document.getElementById('toast-container');
   el.navToggle = document.getElementById('nav-toggle');
   el.navMenu = document.getElementById('navbar-menu');
@@ -142,6 +184,20 @@ function showToast(message, type = 'success') {
     toast.classList.add('toast--out');
     setTimeout(() => toast.remove(), 250);
   }, 3200);
+}
+
+function getGridColumnCount() {
+  return window.matchMedia('(max-width: 375px)').matches
+    ? 1
+    : window.matchMedia('(max-width: 640px)').matches
+      ? 2
+      : window.matchMedia('(max-width: 1024px)').matches
+        ? 3
+        : 4;
+}
+
+function getInitialVisibleCount() {
+  return getGridColumnCount() * 3;
 }
 
 function whatsappLink(message) {
@@ -264,7 +320,10 @@ function productCardTemplate(produto) {
 
 function renderProducts(resetVisibleCount = true) {
   if (!el.produtos) return;
-  if (resetVisibleCount) state.visibleCount = 8;
+  if (resetVisibleCount) {
+    state.visibleCount = getInitialVisibleCount();
+    state.hasExpandedCatalog = false;
+  }
   const lista = getFilteredProducts();
 
   if (el.resultsCount) {
@@ -277,6 +336,7 @@ function renderProducts(resetVisibleCount = true) {
   if (!lista.length) {
     el.produtos.innerHTML = '';
     if (el.showMore) el.showMore.hidden = true;
+    el.productsWrap?.classList.remove('has-more');
     if (state.carouselTimer) window.clearInterval(state.carouselTimer);
     if (el.emptyState) el.emptyState.hidden = false;
     return;
@@ -285,7 +345,9 @@ function renderProducts(resetVisibleCount = true) {
 
   const produtosVisiveis = lista.slice(0, state.visibleCount);
   el.produtos.innerHTML = produtosVisiveis.map(productCardTemplate).join('');
-  if (el.showMore) el.showMore.hidden = lista.length <= state.visibleCount;
+  const hasMore = lista.length > state.visibleCount;
+  if (el.showMore) el.showMore.hidden = !hasMore;
+  el.productsWrap?.classList.toggle('has-more', hasMore);
 
   if (state.carouselTimer) window.clearInterval(state.carouselTimer);
 
@@ -339,8 +401,15 @@ function setupFilters() {
   el.sortFilter?.addEventListener('change', (e) => { state.ordenar = e.target.value; renderProducts(); });
   el.clearFilters?.addEventListener('click', clearAllFilters);
   el.showMore?.addEventListener('click', () => {
-    state.visibleCount += 8;
+    state.hasExpandedCatalog = true;
+    state.visibleCount += getGridColumnCount() * 2;
     renderProducts(false);
+  });
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    if (state.hasExpandedCatalog) return;
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => renderProducts(), 150);
   });
 }
 
@@ -426,7 +495,9 @@ const tryOn = {
   threeScene: null,
   threeCamera: null,
   glassesModel: null,
+  glassesModelPath: null,
   threeLoading: null,
+  threeLoadingPath: null,
   modelReady: false
 };
 
@@ -550,29 +621,34 @@ function stopTryOn() {
 }
 
 async function ensureThreeModel() {
-  if (!currentProduct?.modelo3D) return false;
-  if (tryOn.modelReady) return true;
-  if (tryOn.threeLoading) return tryOn.threeLoading;
+  const modelPath = currentProduct?.modelo3D;
+  if (!modelPath) return false;
+  if (tryOn.modelReady && tryOn.glassesModelPath === modelPath) return true;
+  if (tryOn.threeLoading && tryOn.threeLoadingPath === modelPath) return tryOn.threeLoading;
 
+  tryOn.threeLoadingPath = modelPath;
   tryOn.threeLoading = (async () => {
     const three = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
     const { GLTFLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js');
     const { threeCanvas } = tryOnEls();
     if (!threeCanvas) return false;
 
-    tryOn.threeRenderer = new three.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
-    tryOn.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    tryOn.threeRenderer.setClearColor(0x000000, 0);
-    tryOn.threeScene = new three.Scene();
-    tryOn.threeScene.add(new three.HemisphereLight(0xffffff, 0x555555, 2.2));
-    const keyLight = new three.DirectionalLight(0xffffff, 2.5);
-    keyLight.position.set(0, 1, 3);
-    tryOn.threeScene.add(keyLight);
-    tryOn.threeCamera = new three.OrthographicCamera(-1, 1, 1, -1, -1000, 1000);
+    if (!tryOn.threeRenderer) {
+      tryOn.threeRenderer = new three.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+      tryOn.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      tryOn.threeRenderer.setClearColor(0x000000, 0);
+      tryOn.threeScene = new three.Scene();
+      tryOn.threeScene.add(new three.HemisphereLight(0xffffff, 0x555555, 2.2));
+      const keyLight = new three.DirectionalLight(0xffffff, 2.5);
+      keyLight.position.set(0, 1, 3);
+      tryOn.threeScene.add(keyLight);
+      tryOn.threeCamera = new three.OrthographicCamera(-1, 1, 1, -1, -1000, 1000);
+    }
 
     const gltf = await new Promise((resolve, reject) => {
-      new GLTFLoader().load(currentProduct.modelo3D, resolve, undefined, reject);
+      new GLTFLoader().load(modelPath, resolve, undefined, reject);
     });
+    if (!tryOn.active || currentProduct?.modelo3D !== modelPath) return false;
     const model = gltf.scene;
     const bounds = new three.Box3().setFromObject(model);
     const size = bounds.getSize(new three.Vector3());
@@ -583,7 +659,16 @@ async function ensureThreeModel() {
     model.rotation.order = 'YXZ';
     model.visible = false;
     model.userData.baseWidth = Math.max(size.x, size.z, 0.001);
+    if (tryOn.glassesModel) {
+      tryOn.threeScene.remove(tryOn.glassesModel);
+      tryOn.glassesModel.traverse((object) => {
+        object.geometry?.dispose();
+        if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose());
+        else object.material?.dispose();
+      });
+    }
     tryOn.glassesModel = model;
+    tryOn.glassesModelPath = modelPath;
     tryOn.threeScene.add(model);
     tryOn.modelReady = true;
     resizeThreeCanvas();
@@ -591,6 +676,11 @@ async function ensureThreeModel() {
   })().catch((error) => {
     console.warn('Modelo 3D indisponível; usando imagem de fallback.', error);
     return false;
+  }).finally(() => {
+    if (tryOn.threeLoadingPath === modelPath) {
+      tryOn.threeLoading = null;
+      tryOn.threeLoadingPath = null;
+    }
   });
 
   return tryOn.threeLoading;
@@ -650,9 +740,6 @@ function loadOverlaysForCurrentProduct() {
   const angulos = currentProduct.provadorAngulos;
   if (angulos) {
     Object.entries(angulos).forEach(([chave, src]) => loadOverlayImage(src, chave));
-  } else if (currentProduct.imagens?.length > 1) {
-    // Sem marcação explícita de ângulo: usa a primeira imagem como frontal.
-    loadOverlayImage(currentProduct.imagens[0], 'frontal');
   } else {
     loadOverlayImage(currentProduct.imagemProvador || currentProduct.imagem, 'frontal');
   }
@@ -778,7 +865,9 @@ function drawGlasses(ctx, landmarks, width, height) {
   const facePitch = noseBridge.y - eyeCenterY;
   const angleKey = pickAngleKey(faceTurn);
   const overlay = tryOn.overlays[angleKey];
-  if (!overlay) return;
+  const has3DModel = tryOn.modelReady && tryOn.glassesModel &&
+    currentProduct?.modelo3D === tryOn.glassesModelPath;
+  if (!overlay && !has3DModel) return;
 
   const targetHeight = overlay ? targetWidth * (overlay.height / overlay.width) : targetWidth * 0.42;
   const target = {
@@ -806,7 +895,7 @@ function drawGlasses(ctx, landmarks, width, height) {
   }
   const s = tryOn.smoothed;
 
-  if (tryOn.modelReady && tryOn.glassesModel && currentProduct?.modelo3D) {
+  if (has3DModel) {
     const model = tryOn.glassesModel;
     const scale = s.w / model.userData.baseWidth;
     model.visible = true;
