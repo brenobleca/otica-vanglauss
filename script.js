@@ -8,7 +8,7 @@
 // telefone, endereço, Instagram etc., edite apenas este objeto.
 const CONFIG = {
   empresa: 'Ótica Vanglauss',
-  whatsappPhone: '5513999985388', // formato: DDI+DDD+numero, apenas dígitos
+  whatsappPhone: '5513996985388', // formato: DDI+DDD+numero, apenas dígitos
   mapsUrl: 'https://www.google.com/maps/search/Av.+Francisco+Glicerio,+189,+Santos',
   instagramUrl: 'https://instagram.com/oticavanglauss',
   instagramHandle: '@oticavanglauss',
@@ -35,7 +35,7 @@ const modelosCatalogo = [
   [11, 'HG59012', 'Alumínio fechado HG59012', 'VG', 'grau', 'masculino', 'Tamanho 56; armação de alumínio na cor azul.'],
   [12, '91226', 'Alumínio fechado 91226', 'VG', 'grau', 'masculino', 'Tamanho 60; armação de alumínio cinza fosco.'],
   [13, '59213', 'Metal fechado 59213', 'VG', 'grau', 'masculino', 'Tamanho 52; armação verde; hastes de alumínio.'],
-  [14, 'SL1795', 'Balgrif SL1795', 'Balgrif', 'grau', 'unissex', 'Tamanho 53; armação bronze; hastes de alumínio.'],
+  [14, 'SL1795', 'Balgrif SL1795', 'VG', 'grau', 'unissex', 'Tamanho 53; armação bronze; hastes de alumínio.'],
   [15, 'ISA163', 'Metal Nylon ISA163', 'VG', 'grau', 'masculino', 'Tamanho 58; armação preta.'],
   [16, '5845', 'Metal Nylon 5845', 'VG', 'grau', 'masculino', 'Tamanho 47; armação prata; hastes de alumínio.'],
   [17, 'J31086', 'Metal fechado J31086', 'VG', 'grau', 'masculino', 'Tamanho 57; armação cinza fosco.'],
@@ -56,7 +56,7 @@ const modelosCatalogo = [
   [32, 'R-20573', 'Metal Nylon R 20573', 'VG', 'grau', 'feminino', 'Tamanho 55; armação dourada.'],
   [33, 'ISA-17027', 'Metal ISA 17027', 'VG', 'grau', 'feminino', 'Tamanho 53; armação preta.'],
   [34, 'BR-22353', 'Metal BR 22353', 'VG', 'grau', 'feminino', 'Tamanho 52; armação dourada.'],
-  [35, 'HL-5004', 'Balgrif HL 5004', 'Balgrif', 'grau', 'feminino', 'Tamanho 52; armação dourada.'],
+  [35, 'HL-5004', 'Balgrif HL 5004', 'VG', 'grau', 'feminino', 'Tamanho 52; armação dourada.'],
   [36, '5096', 'Metal 5096', 'VG', 'grau', 'feminino', 'Tamanho 52; armação preta.'],
   [37, 'BX96045', 'Metal BX96045', 'VG', 'grau', 'feminino', 'Tamanho 52; armação dourada de titânio.'],
   [38, 'BW-9062', 'Acetato BW 9062', 'VG', 'grau', 'feminino', 'Tamanho 48; armação na cor uva.'],
@@ -97,7 +97,14 @@ const fotosSemEtiqueta = {
   19: [1, 2, 3, 4],
   20: [1, 2, 3],
   21: [1, 2, 3],
-  22: [1, 2, 3]
+  22: [1, 2, 3],
+  23: [1, 2, 3, 4],
+  24: [1, 2, 3],
+  25: [1, 2, 3],
+  26: [1, 2, 3],
+  27: [1, 2, 3],
+  28: [1, 2, 3],
+  29: [1, 2, 3]
 };
 const assetsProvador = {
   1: { modelo3D: 'img/modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
@@ -111,7 +118,7 @@ const assetsProvador = {
   9: { imagemProvador: 'img/oculos-png/download (8).png' }
 };
 const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
-  const marcaArquivo = marca.toUpperCase().replace(/\s+/g, '-');
+  const marcaArquivo = [14, 35].includes(id) ? 'BALGRIF' : marca.toUpperCase().replace(/\s+/g, '-');
   const quantidadeFotos = quantidadeFotosExtra[id] || 3;
   const indicesSemEtiqueta = fotosSemEtiqueta[id];
   const imagens = indicesSemEtiqueta
@@ -124,7 +131,7 @@ const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, gener
   return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
 });
 
-const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux', 'Balgrif'];
+const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux'];
 
 /* ---------- ESTADO ---------- */
 const state = {
@@ -156,6 +163,7 @@ function cacheElements() {
   el.sortFilter = document.getElementById('sort-filter');
   el.clearFilters = document.getElementById('clear-filters');
   el.showMore = document.getElementById('show-more-products');
+  el.catalogMore = document.querySelector('.catalog-more');
   el.productsWrap = document.getElementById('products-grid-wrap');
   el.toastContainer = document.getElementById('toast-container');
   el.navToggle = document.getElementById('nav-toggle');
@@ -244,14 +252,23 @@ function setupMobileNav() {
   el.navToggle.addEventListener('click', () => {
     const isOpen = el.navMenu.classList.toggle('is-open');
     el.navToggle.setAttribute('aria-expanded', String(isOpen));
+    el.navToggle.setAttribute('aria-label', isOpen ? 'Fechar menu' : 'Abrir menu');
     document.body.classList.toggle('no-scroll', isOpen);
   });
   el.navMenu.querySelectorAll('a').forEach((link) => {
     link.addEventListener('click', () => {
       el.navMenu.classList.remove('is-open');
       el.navToggle.setAttribute('aria-expanded', 'false');
+      el.navToggle.setAttribute('aria-label', 'Abrir menu');
       document.body.classList.remove('no-scroll');
     });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !el.navMenu.classList.contains('is-open')) return;
+    el.navMenu.classList.remove('is-open');
+    el.navToggle.setAttribute('aria-expanded', 'false');
+    el.navToggle.setAttribute('aria-label', 'Abrir menu');
+    document.body.classList.remove('no-scroll');
   });
 }
 
@@ -336,6 +353,7 @@ function renderProducts(resetVisibleCount = true) {
   if (!lista.length) {
     el.produtos.innerHTML = '';
     if (el.showMore) el.showMore.hidden = true;
+    if (el.catalogMore) el.catalogMore.hidden = true;
     el.productsWrap?.classList.remove('has-more');
     if (state.carouselTimer) window.clearInterval(state.carouselTimer);
     if (el.emptyState) el.emptyState.hidden = false;
@@ -347,6 +365,7 @@ function renderProducts(resetVisibleCount = true) {
   el.produtos.innerHTML = produtosVisiveis.map(productCardTemplate).join('');
   const hasMore = lista.length > state.visibleCount;
   if (el.showMore) el.showMore.hidden = !hasMore;
+  if (el.catalogMore) el.catalogMore.hidden = !hasMore;
   el.productsWrap?.classList.toggle('has-more', hasMore);
 
   if (state.carouselTimer) window.clearInterval(state.carouselTimer);
@@ -390,10 +409,144 @@ function clearAllFilters() {
   if (el.genderFilter) el.genderFilter.value = 'all';
   if (el.brandFilter) el.brandFilter.value = 'all';
   if (el.sortFilter) el.sortFilter.value = 'relevancia';
+  document.querySelectorAll('.filters-bar .filter-select').forEach(syncFilterControl);
   renderProducts();
 }
 
+function closeFilterControl(control, restoreFocus = false) {
+  const trigger = control.querySelector('.filter-trigger');
+  const options = control.querySelector('.filter-options');
+  if (!trigger || !options || options.hidden) return;
+  options.hidden = true;
+  trigger.setAttribute('aria-expanded', 'false');
+  control.classList.remove('opens-up');
+  if (restoreFocus) trigger.focus();
+}
+
+function openFilterControl(control) {
+  document.querySelectorAll('.filter-control').forEach((otherControl) => {
+    if (otherControl !== control) closeFilterControl(otherControl);
+  });
+  const trigger = control.querySelector('.filter-trigger');
+  const options = control.querySelector('.filter-options');
+  if (!trigger || !options) return;
+  options.hidden = false;
+  trigger.setAttribute('aria-expanded', 'true');
+  const triggerBounds = trigger.getBoundingClientRect();
+  const menuMaxHeight = Math.min(288, window.innerHeight * 0.55);
+  const menuHeight = Math.min(options.scrollHeight, menuMaxHeight);
+  const spaceBelow = window.innerHeight - triggerBounds.bottom;
+  const spaceAbove = triggerBounds.top;
+  control.classList.toggle('opens-up', spaceBelow < menuHeight + 8 && spaceAbove > spaceBelow);
+  const selectedOption = options.querySelector('[aria-selected="true"]') || options.querySelector('[role="option"]');
+  selectedOption?.focus();
+}
+
+function syncFilterControl(select) {
+  const control = select.closest('.filter-control');
+  if (!control) return;
+  const trigger = control.querySelector('.filter-trigger');
+  const value = control.querySelector('.filter-trigger-value');
+  const selectedOption = select.options[select.selectedIndex];
+  if (!trigger || !value || !selectedOption) return;
+
+  const label = select.labels?.[0]?.textContent.trim() || select.getAttribute('aria-label') || '';
+  const optionLabel = selectedOption.textContent.trim();
+  const valueLabel = optionLabel.replace(new RegExp(`^${label}:\\s*`, 'i'), '');
+  value.textContent = valueLabel;
+  trigger.setAttribute('aria-label', `${label}: ${valueLabel}`);
+  control.querySelectorAll('[role="option"]').forEach((option) => {
+    const isSelected = option.dataset.value === select.value;
+    option.setAttribute('aria-selected', String(isSelected));
+  });
+}
+
+function enhanceFilterControl(select) {
+  const label = select.labels?.[0]?.textContent.trim() || select.getAttribute('aria-label') || '';
+  const control = document.createElement('div');
+  control.className = 'filter-control';
+  select.parentNode.insertBefore(control, select);
+  control.appendChild(select);
+  select.tabIndex = -1;
+  select.setAttribute('aria-hidden', 'true');
+
+  const trigger = document.createElement('button');
+  trigger.className = 'filter-trigger';
+  trigger.type = 'button';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.setAttribute('aria-controls', `${select.id}-options`);
+  trigger.innerHTML = `<span class="filter-trigger-copy"><span class="filter-control-label"></span><span class="filter-trigger-value"></span></span><span class="filter-trigger-chevron" aria-hidden="true"></span>`;
+  trigger.querySelector('.filter-control-label').textContent = label;
+
+  const options = document.createElement('div');
+  options.id = `${select.id}-options`;
+  options.className = 'filter-options';
+  options.setAttribute('role', 'listbox');
+  options.setAttribute('aria-label', label);
+  options.hidden = true;
+
+  Array.from(select.options).forEach((option) => {
+    const button = document.createElement('button');
+    button.className = 'filter-option';
+    button.type = 'button';
+    button.dataset.value = option.value;
+    button.setAttribute('role', 'option');
+    button.tabIndex = -1;
+    button.textContent = option.textContent.replace(new RegExp(`^${label}:\\s*`, 'i'), '');
+    button.addEventListener('click', () => {
+      select.value = option.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeFilterControl(control, true);
+    });
+    button.addEventListener('keydown', (event) => {
+      const optionButtons = Array.from(options.querySelectorAll('[role="option"]'));
+      const index = optionButtons.indexOf(button);
+      let nextIndex = index;
+      if (event.key === 'ArrowDown') nextIndex = (index + 1) % optionButtons.length;
+      else if (event.key === 'ArrowUp') nextIndex = (index - 1 + optionButtons.length) % optionButtons.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = optionButtons.length - 1;
+      else if (event.key === 'Escape') {
+        event.preventDefault();
+        closeFilterControl(control, true);
+        return;
+      } else if (event.key === 'Tab') {
+        closeFilterControl(control);
+        return;
+      } else {
+        return;
+      }
+      event.preventDefault();
+      optionButtons[nextIndex]?.focus();
+    });
+    options.appendChild(button);
+  });
+
+  trigger.addEventListener('click', () => {
+    if (options.hidden) openFilterControl(control);
+    else closeFilterControl(control);
+  });
+  trigger.addEventListener('keydown', (event) => {
+    if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      openFilterControl(control);
+    } else if (event.key === 'Escape') {
+      closeFilterControl(control);
+    }
+  });
+  select.addEventListener('change', () => syncFilterControl(select));
+
+  control.append(trigger, options);
+  syncFilterControl(select);
+}
+
 function setupFilters() {
+  document.querySelectorAll('.filters-bar .filter-select').forEach(enhanceFilterControl);
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.filter-control')) return;
+    document.querySelectorAll('.filter-control').forEach((control) => closeFilterControl(control));
+  });
   el.search?.addEventListener('input', (e) => { state.search = e.target.value; renderProducts(); });
   el.categoryFilter?.addEventListener('change', (e) => { state.categoria = e.target.value; renderProducts(); });
   el.genderFilter?.addEventListener('change', (e) => { state.genero = e.target.value; renderProducts(); });
