@@ -74,40 +74,24 @@ const modelosCatalogo = [
   [50, '68675', 'Acetato 68675', 'VG', 'grau', 'feminino', 'Tamanho 49; armação caramelo.']
 ];
 
-const quantidadeFotosExtra = { 6: 4, 7: 4, 29: 4, 30: 4 };
+const quantidadeFotosExtra = { 6: 4, 7: 4, 23: 4, 29: 4, 30: 4 };
 const fotosSemEtiqueta = {
-  1: [1, 2, 3],
-  2: [1, 2, 3],
-  3: [1, 2, 3],
-  4: [1, 2, 3],
-  5: [1, 2, 3],
-  6: [1, 2, 3, 4],
-  7: [1, 2, 3, 4],
-  8: [1, 2, 3],
-  9: [1, 2],
-  10: [2],
-  11: [2, 3],
-  12: [1, 2, 3],
-  13: [1, 2, 3, 4, 5, 6],
-  14: [1, 2, 3, 4, 6],
-  15: [1, 2, 3, 4, 5],
-  16: [1, 2, 3],
-  17: [1, 2, 3, 4],
-  18: [1, 2, 3],
-  19: [1, 2, 3, 4],
-  20: [1, 2, 3],
-  21: [1, 2, 3],
-  22: [1, 2, 3],
-  23: [1, 2, 3, 4],
-  24: [1, 2, 3],
-  25: [1, 2, 3],
-  26: [1, 2, 3],
-  27: [1, 2, 3],
-  28: [1, 2, 3],
-  29: [1, 2, 3]
+  10: [3],
+  16: [1, 2, 3, 'extra'],
+  22: [1, 2],
+  29: [1, 2, 3, 'extra'],
+  30: ['extra-1', 'extra-2', 'extra-3'],
+  31: ['extra-1', 'extra-2', 'extra-3'],
+  32: ['extra-1', 'extra-2', 'extra-3'],
+  33: ['extra-1', 'extra-2'],
+  34: ['extra-1', 'extra-2', 'extra-3'],
+  35: ['extra-1', 'extra-2', 'extra-3'],
+  36: ['extra-1', 'extra-2', 'extra-3', 'extra-4'],
+  41: [2, 3],
+  48: [1, 3]
 };
 const assetsProvador = {
-  1: { modelo3D: 'img/modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
+  1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
   2: { imagemProvador: 'img/oculos-png/download (1).png' },
   3: { imagemProvador: 'img/oculos-png/download (2).png' },
   4: { imagemProvador: 'img/oculos-png/download (3).png' },
@@ -123,10 +107,10 @@ const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, gener
   const indicesSemEtiqueta = fotosSemEtiqueta[id];
   const imagens = indicesSemEtiqueta
     ? indicesSemEtiqueta.map((indice) =>
-        `img/oculos-sem-etiqueta/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice}-SE.png`
+        `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice}.png`
       )
     : Array.from({ length: quantidadeFotos }, (_, indice) =>
-        `img/oculos-webp/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.webp`
+        `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.png`
       );
   return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
 });

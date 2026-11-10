@@ -606,7 +606,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .footer { padding: 0 0 1.5rem; background: var(--black); color: var(--white); }
 .footer-photo-banner {
   height: 250px;
-  background: linear-gradient(90deg, rgba(17, 17, 17, 0.16), rgba(17, 17, 17, 0.04)), var(--cream) url('img/banner-otica-vanglauss.png') center 53% / cover no-repeat;
+  background: linear-gradient(90deg, rgba(17, 17, 17, 0.16), rgba(17, 17, 17, 0.04)), var(--cream) url('img/banner/banner-otica-vanglauss.png') center 53% / cover no-repeat;
   border-bottom: 1px solid var(--border);
   margin-bottom: 3rem;
 }
