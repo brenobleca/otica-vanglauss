@@ -76,30 +76,28 @@ const modelosCatalogo = [
 
 const quantidadeFotosExtra = { 6: 4, 7: 4, 23: 4, 29: 4, 30: 4 };
 const fotosSemEtiqueta = {
-  10: [3],
-  16: [1, 2, 3, 'extra'],
   22: [1, 2],
   29: [1, 2, 3, 'extra'],
   30: ['extra-1', 'extra-2', 'extra-3'],
   31: ['extra-1', 'extra-2', 'extra-3'],
   32: ['extra-1', 'extra-2', 'extra-3'],
   33: ['extra-1', 'extra-2'],
-  34: ['extra-1', 'extra-2', 'extra-3'],
+  34: [1, 'extra-1', 'extra-3'],
   35: ['extra-1', 'extra-2', 'extra-3'],
   36: ['extra-1', 'extra-2', 'extra-3', 'extra-4'],
-  41: [2, 3],
   48: [1, 3]
 };
 const assetsProvador = {
   1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
   2: { imagemProvador: 'img/oculos-png/download (1).png' },
-  3: { imagemProvador: 'img/oculos-png/download (2).png' },
+  3: { modelo3D: 'modelos-3d/t2.glb', imagemProvador: 'img/oculos-png/download (2).png' },
   4: { imagemProvador: 'img/oculos-png/download (3).png' },
-  5: { imagemProvador: 'img/oculos-png/download (4).png' },
+  5: { modelo3D: 'modelos-3d/t-1211-2.glb', imagemProvador: 'img/oculos-png/download (4).png' },
   6: { imagemProvador: 'img/oculos-png/download (5).png' },
   7: { imagemProvador: 'img/oculos-png/download (6).png' },
   8: { imagemProvador: 'img/oculos-png/download (7).png' },
-  9: { imagemProvador: 'img/oculos-png/download (8).png' }
+  9: { imagemProvador: 'img/oculos-png/download (8).png' },
+  10: { modelo3D: 'modelos-3d/t-1211-4.glb' }
 };
 const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
   const marcaArquivo = [14, 35].includes(id) ? 'BALGRIF' : marca.toUpperCase().replace(/\s+/g, '-');
@@ -125,8 +123,7 @@ const state = {
   marca: 'all',
   ordenar: 'relevancia',
   visibleCount: 0,
-  hasExpandedCatalog: false,
-  carouselTimer: null
+  hasExpandedCatalog: false
 };
 
 let currentProduct = null;
@@ -153,6 +150,7 @@ function cacheElements() {
   el.navToggle = document.getElementById('nav-toggle');
   el.navMenu = document.getElementById('navbar-menu');
   el.brandsRow = document.getElementById('marcas-row');
+  el.searchToggle = document.getElementById('search-toggle');
 }
 
 /* ---------- UTIL ---------- */
@@ -179,13 +177,9 @@ function showToast(message, type = 'success') {
 }
 
 function getGridColumnCount() {
-  return window.matchMedia('(max-width: 375px)').matches
-    ? 1
-    : window.matchMedia('(max-width: 640px)').matches
-      ? 2
-      : window.matchMedia('(max-width: 1024px)').matches
-        ? 3
-        : 4;
+  if (window.matchMedia('(max-width: 640px)').matches) return 1;
+  if (window.matchMedia('(max-width: 1024px)').matches) return 3;
+  return 4;
 }
 
 function getInitialVisibleCount() {
@@ -253,6 +247,35 @@ function setupMobileNav() {
     el.navToggle.setAttribute('aria-expanded', 'false');
     el.navToggle.setAttribute('aria-label', 'Abrir menu');
     document.body.classList.remove('no-scroll');
+  });
+}
+
+function setupMobileSearch() {
+  const searchBox = el.search?.closest('.search-box');
+  if (!searchBox || !el.searchToggle) return;
+
+  const closeSearch = () => {
+    searchBox.classList.remove('is-open');
+    el.searchToggle.setAttribute('aria-expanded', 'false');
+    el.searchToggle.setAttribute('aria-label', 'Abrir busca');
+  };
+
+  el.searchToggle.addEventListener('click', () => {
+    const isOpen = searchBox.classList.toggle('is-open');
+    el.searchToggle.setAttribute('aria-expanded', String(isOpen));
+    el.searchToggle.setAttribute('aria-label', isOpen ? 'Fechar busca' : 'Abrir busca');
+    if (isOpen) el.search.focus();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!searchBox.contains(event.target)) closeSearch();
+  });
+
+  el.search.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeSearch();
+      el.searchToggle.focus();
+    }
   });
 }
 
@@ -339,7 +362,6 @@ function renderProducts(resetVisibleCount = true) {
     if (el.showMore) el.showMore.hidden = true;
     if (el.catalogMore) el.catalogMore.hidden = true;
     el.productsWrap?.classList.remove('has-more');
-    if (state.carouselTimer) window.clearInterval(state.carouselTimer);
     if (el.emptyState) el.emptyState.hidden = false;
     return;
   }
@@ -351,8 +373,6 @@ function renderProducts(resetVisibleCount = true) {
   if (el.showMore) el.showMore.hidden = !hasMore;
   if (el.catalogMore) el.catalogMore.hidden = !hasMore;
   el.productsWrap?.classList.toggle('has-more', hasMore);
-
-  if (state.carouselTimer) window.clearInterval(state.carouselTimer);
 
   el.produtos.querySelectorAll('.product-card').forEach((card) => {
     const id = Number(card.dataset.id);
@@ -369,17 +389,6 @@ function renderProducts(resetVisibleCount = true) {
     card.querySelector('[data-action="detail"]').addEventListener('click', () => showProductDetail(id, card));
     card.querySelector('[data-action="tryon"]').addEventListener('click', () => openTryOn(id, card));
   });
-
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    state.carouselTimer = window.setInterval(() => {
-      el.produtos.querySelectorAll('.product-card').forEach((card) => {
-        const bounds = card.getBoundingClientRect();
-        const isVisible = bounds.bottom > 0 && bounds.top < window.innerHeight;
-        if (!isVisible || !card.matches(':hover')) return;
-        card.querySelector('[data-action="next-image"]')?.click();
-      });
-    }, 5000);
-  }
 }
 
 function clearAllFilters() {
@@ -1107,6 +1116,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFilters();
   setupModalClosers();
   setupMobileNav();
+  setupMobileSearch();
 
   document.getElementById('detail-tryon-btn')?.addEventListener('click', () => openTryOn(currentProduct?.id));
   document.getElementById('detail-whatsapp-btn')?.addEventListener('click', contactViaWhatsApp);
