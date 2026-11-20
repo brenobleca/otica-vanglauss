@@ -89,7 +89,7 @@ const fotosSemEtiqueta = {
 };
 const assetsProvador = {
   1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
-  2: { imagemProvador: 'img/oculos-png/download (1).png' },
+  2: { modelo3D: 'modelos-3d/02-VG-H00135.glb', imagemProvador: 'img/oculos-png/download (1).png' },
   3: { modelo3D: 'modelos-3d/t2.glb', imagemProvador: 'img/oculos-png/download (2).png' },
   4: { imagemProvador: 'img/oculos-png/download (3).png' },
   5: { modelo3D: 'modelos-3d/t-1211-2.glb', imagemProvador: 'img/oculos-png/download (4).png' },
