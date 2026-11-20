@@ -490,27 +490,30 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   padding: 1rem;
 }
 .img-error .product-image-fallback { display: flex; }
-.product-image-next {
+.product-image-nav {
   position: absolute;
   top: 50%;
-  right: 0.65rem;
   display: grid;
   place-items: center;
   width: 38px;
   height: 38px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--border);
+  color: var(--gold-dark);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(201, 162, 39, 0.38);
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-50%);
-  transition: opacity 0.2s ease, background 0.2s ease;
+  box-shadow: 0 3px 12px rgba(17, 17, 17, 0.14);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
-.product-image-next svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.product-card:hover .product-image-next,
-.product-card:focus-within .product-image-next { opacity: 1; pointer-events: auto; }
-.product-image-next:hover { background: var(--white); }
+.product-image-prev { left: 0.65rem; }
+.product-image-next { right: 0.65rem; }
+.product-image-nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.product-card:hover .product-image-nav,
+.product-card:focus-within .product-image-nav { opacity: 1; pointer-events: auto; }
+.product-image-nav:hover { color: var(--white); background: var(--gold-dark); transform: translateY(-50%) scale(1.06); }
 
 .product-content {
   display: flex;
@@ -1038,19 +1041,24 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .results-bar { margin-bottom: 0.85rem; font-size: 0.8rem; }
 
   .products-section { padding-bottom: 3.5rem; }
-  .products-grid { grid-template-columns: 1fr; gap: 0.8rem; }
+  .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
   .product-card { display: flex; flex-direction: column; border-radius: 0.75rem; }
   .product-card:hover { transform: none; }
   .product-image-wrapper { width: 100%; min-height: 0; aspect-ratio: 3 / 2; }
   .product-image { object-fit: contain; }
-  .product-image-next { top: auto; right: 0.45rem; bottom: 0.45rem; width: 44px; height: 44px; opacity: 1; pointer-events: auto; transform: none; }
+  .product-image-nav { width: 34px; height: 34px; }
+  .product-card.is-image-controls-visible .product-image-nav { opacity: 1; pointer-events: auto; }
+  .product-image-prev { left: 0.35rem; }
+  .product-image-next { right: 0.35rem; }
+  .product-image-nav svg { width: 18px; height: 18px; }
+  .product-image-wrapper { touch-action: pan-y; }
   .product-content { min-width: 0; padding: 0.85rem 0.8rem; gap: 0.28rem; }
   .product-brand { font-size: 0.63rem; }
   .product-name { font-size: 0.98rem; }
   .product-category { font-size: 0.74rem; }
   .product-price { font-size: 1rem; }
   .product-actions { flex-direction: row; gap: 0.35rem; padding-top: 0.55rem; }
-  .btn-view, .btn-try-on { min-height: 44px; padding: 0.5rem 0.2rem; font-size: 0.68rem; white-space: nowrap; }
+  .btn-view, .btn-try-on { min-height: 44px; padding: 0.5rem 0.2rem; font-size: 0.64rem; white-space: nowrap; }
 
   .contact-section { padding: 3rem 0; }
   .contact-grid { gap: 0.8rem; margin-top: 1.5rem; }
@@ -1100,5 +1108,5 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .product-name { font-size: 0.92rem; }
   .product-brand { font-size: 0.58rem; }
   .product-actions { flex-direction: column; gap: 0.35rem; }
-  .btn-view, .btn-try-on { font-size: 0.68rem; }
+  .btn-view, .btn-try-on { font-size: 0.64rem; }
 }

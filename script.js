@@ -74,18 +74,13 @@ const modelosCatalogo = [
   [50, '68675', 'Acetato 68675', 'VG', 'grau', 'feminino', 'Tamanho 49; armação caramelo.']
 ];
 
-const quantidadeFotosExtra = { 6: 4, 7: 4, 23: 4, 29: 4, 30: 4 };
+const quantidadeFotosExtra = { 6: 4, 7: 4, 29: 4, 30: 4 };
 const fotosSemEtiqueta = {
-  22: [1, 2],
+  23: [1, 3, 4],
   29: [1, 2, 3, 'extra'],
-  30: ['extra-1', 'extra-2', 'extra-3'],
-  31: ['extra-1', 'extra-2', 'extra-3'],
   32: ['extra-1', 'extra-2', 'extra-3'],
-  33: ['extra-1', 'extra-2'],
-  34: [1, 'extra-1', 'extra-3'],
   35: ['extra-1', 'extra-2', 'extra-3'],
-  36: ['extra-1', 'extra-2', 'extra-3', 'extra-4'],
-  48: [1, 3]
+  36: ['extra-1', 'extra-2', 'extra-3']
 };
 const assetsProvador = {
   1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
@@ -177,7 +172,7 @@ function showToast(message, type = 'success') {
 }
 
 function getGridColumnCount() {
-  if (window.matchMedia('(max-width: 640px)').matches) return 1;
+  if (window.matchMedia('(max-width: 640px)').matches) return 2;
   if (window.matchMedia('(max-width: 1024px)').matches) return 3;
   return 4;
 }
@@ -324,7 +319,10 @@ function productCardTemplate(produto) {
           decoding="async"
           onerror="this.closest('.product-image-wrapper').classList.add('img-error'); this.style.display='none';"
         />
-        <button type="button" class="product-image-next" data-action="next-image" aria-label="Próxima foto de ${produto.nome}">
+        <button type="button" class="product-image-nav product-image-prev" data-action="previous-image" aria-label="Foto anterior de ${produto.nome}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <button type="button" class="product-image-nav product-image-next" data-action="next-image" aria-label="Próxima foto de ${produto.nome}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
         </button>
         <div class="product-image-fallback" aria-hidden="true">Imagem indisponível</div>
@@ -335,7 +333,7 @@ function productCardTemplate(produto) {
         <p class="product-category">${categoriaLabel(produto.categoria)}</p>
         <div class="product-price">${formatPrice(produto.preco)}</div>
         <div class="product-actions">
-          <button type="button" class="btn-view" data-action="detail" aria-label="Ver detalhes de ${produto.nome}">Ver detalhes</button>
+          <button type="button" class="btn-view" data-action="detail" aria-label="Ver detalhes de ${produto.nome}">Detalhes</button>
           <button type="button" class="btn-try-on" data-action="tryon" aria-label="Experimentar ${produto.nome} virtualmente">Experimentar</button>
         </div>
       </div>
@@ -379,13 +377,41 @@ function renderProducts(resetVisibleCount = true) {
     const produto = produtos.find((item) => item.id === id);
     const image = card.querySelector('.product-image');
     let imageIndex = 0;
-    const showNextImage = () => {
+    const showImage = (direction) => {
       if (!produto?.imagens?.length) return;
-      imageIndex = (imageIndex + 1) % produto.imagens.length;
+      imageIndex = (imageIndex + direction + produto.imagens.length) % produto.imagens.length;
       image.src = produto.imagens[imageIndex];
       image.alt = `${produto.nome} — ${produto.marca}, foto ${imageIndex + 1}`;
     };
-    card.querySelector('[data-action="next-image"]')?.addEventListener('click', showNextImage);
+    const imageControls = card.querySelectorAll('.product-image-nav');
+    imageControls.forEach((control) => {
+      control.hidden = !produto?.imagens || produto.imagens.length <= 1;
+    });
+    card.querySelector('[data-action="previous-image"]')?.addEventListener('click', () => showImage(-1));
+    card.querySelector('[data-action="next-image"]')?.addEventListener('click', () => showImage(1));
+    const imageWrapper = card.querySelector('.product-image-wrapper');
+    let swipeStart = null;
+    imageWrapper?.addEventListener('touchstart', (event) => {
+      el.produtos.querySelectorAll('.product-card.is-image-controls-visible').forEach((activeCard) => {
+        activeCard.classList.remove('is-image-controls-visible');
+      });
+      card.classList.add('is-image-controls-visible');
+
+      const touch = event.changedTouches[0];
+      swipeStart = event.target.closest('button') ? null : { x: touch.clientX, y: touch.clientY };
+    }, { passive: true });
+    imageWrapper?.addEventListener('touchend', (event) => {
+      if (!swipeStart) return;
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - swipeStart.x;
+      const deltaY = touch.clientY - swipeStart.y;
+      swipeStart = null;
+      if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      showImage(deltaX < 0 ? 1 : -1);
+    }, { passive: true });
+    imageWrapper?.addEventListener('touchcancel', () => {
+      swipeStart = null;
+    }, { passive: true });
     card.querySelector('[data-action="detail"]').addEventListener('click', () => showProductDetail(id, card));
     card.querySelector('[data-action="tryon"]').addEventListener('click', () => openTryOn(id, card));
   });
