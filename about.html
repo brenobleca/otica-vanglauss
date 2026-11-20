@@ -7,12 +7,23 @@
   <meta name="description" content="Conheça a Ótica Vanglauss, no Gonzaga em Santos: lentes, armações, consertos e atendimento no conforto da sua casa." />
   <meta name="theme-color" content="#111111" />
   <link rel="canonical" href="https://oticavanglauss.com.br/about.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Ótica Vanglauss" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:url" content="https://oticavanglauss.com.br/about.html" />
+  <meta property="og:title" content="Sobre a Ótica Vanglauss — Atendimento em Santos" />
+  <meta property="og:description" content="Lentes, armações, consertos e atendimento no conforto da sua casa, no Gonzaga em Santos." />
+  <meta property="og:image" content="https://oticavanglauss.com.br/img/banner/logo.png" />
+  <meta name="twitter:card" content="summary" />
   <link rel="icon" href="img/banner/logo.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
   <!-- ============ NAVBAR ============ -->
   <header class="navbar">
@@ -23,7 +34,7 @@
 
       <nav id="navbar-menu" class="navbar-menu" aria-label="Navegação principal">
         <a href="index.html#oculos" class="nav-link">Óculos</a>
-        <a href="about.html" class="nav-link is-active">Sobre</a>
+        <a href="about.html" class="nav-link is-active" aria-current="page">Sobre</a>
         <a href="index.html#contato" class="nav-link">Contato</a>
         <a class="nav-link nav-social" href="https://instagram.com/oticavanglauss" target="_blank" rel="noopener">Instagram</a>
       </nav>
@@ -37,7 +48,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="conteudo">
     <section class="about-hero">
       <div class="about-hero-content">
         <span class="section-eyebrow on-dark">Ótica Vanglauss · Gonzaga, Santos</span>
@@ -46,7 +57,7 @@
         <a class="btn-primary" href="https://wa.me/5513996985388" target="_blank" rel="noopener">Solicitar atendimento</a>
       </div>
       <div class="about-hero-image">
-        <img src="img/banner/faixada-2.png" alt="Faixada da Ótica Vanglauss" />
+        <img src="img/banner/faixada-2.png" alt="Faixada da Ótica Vanglauss" fetchpriority="high" />
       </div>
     </section>
 
@@ -112,17 +123,17 @@
         </div>
       </div>
     </section>
-  </main>
 
-  <section class="about-cta">
-    <span class="section-eyebrow on-dark">Vamos conversar?</span>
-    <h2>Seu próximo óculos começa com uma conversa.</h2>
-    <p>Fale com a Ótica Vanglauss e consulte modelos, consertos ou atendimento em casa.</p>
-    <div class="about-cta-buttons">
-      <a class="btn-primary" href="https://wa.me/5513996985388" target="_blank" rel="noopener">Chamar no WhatsApp</a>
-      <a class="btn-secondary" href="index.html#oculos">Ver armações</a>
-    </div>
-  </section>
+    <section class="about-cta">
+      <span class="section-eyebrow on-dark">Vamos conversar?</span>
+      <h2>Seu próximo óculos começa com uma conversa.</h2>
+      <p>Fale com a Ótica Vanglauss e consulte modelos, consertos ou atendimento em casa.</p>
+      <div class="about-cta-buttons">
+        <a class="btn-primary" href="https://wa.me/5513996985388" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+        <a class="btn-secondary" href="index.html#oculos">Ver armações</a>
+      </div>
+    </section>
+  </main>
 
   <!-- ============ FOOTER ============ -->
   <footer class="footer">
@@ -171,17 +182,23 @@
       const toggle = document.getElementById('nav-toggle');
       const menu = document.getElementById('navbar-menu');
       if (!toggle || !menu) return;
+      const closeMenu = () => {
+        menu.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Abrir menu');
+        document.body.classList.remove('no-scroll');
+      };
       toggle.addEventListener('click', () => {
         const isOpen = menu.classList.toggle('is-open');
         toggle.setAttribute('aria-expanded', String(isOpen));
+        toggle.setAttribute('aria-label', isOpen ? 'Fechar menu' : 'Abrir menu');
         document.body.classList.toggle('no-scroll', isOpen);
       });
-      menu.querySelectorAll('a').forEach((link) => {
-        link.addEventListener('click', () => {
-          menu.classList.remove('is-open');
-          toggle.setAttribute('aria-expanded', 'false');
-          document.body.classList.remove('no-scroll');
-        });
+      menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu));
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !menu.classList.contains('is-open')) return;
+        closeMenu();
+        toggle.focus();
       });
     });
   </script>

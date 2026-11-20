@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oticavanglauss.com.br/sitemap.xml

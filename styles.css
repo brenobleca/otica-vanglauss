@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+/* As fontes (DM Sans e Playfair Display) são carregadas por <link> no <head>
+   de cada página, o que evita a cadeia bloqueante de @import. */
 
 /* ============================================================
    TOKENS
@@ -52,6 +53,22 @@ ul { list-style: none; }
   border: 0;
 }
 
+/* Link "Pular para o conteúdo": aparece só quando recebe foco do teclado */
+.skip-link {
+  position: fixed;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 300;
+  padding: 0.7rem 1.1rem;
+  background: var(--black);
+  color: var(--white);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transform: translateY(-200%);
+  transition: transform 0.2s ease;
+}
+.skip-link:focus { transform: translateY(0); }
+
 /* Foco visível para navegação por teclado */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--gold);
@@ -59,6 +76,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
@@ -138,7 +156,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   transform-origin: left;
   transition: var(--ease);
 }
-.nav-link:hover::after, .nav-link.is-active::after { transform: scaleX(1); }
+.nav-link:hover::after, .nav-link:focus-visible::after, .nav-link.is-active::after { transform: scaleX(1); }
 .nav-social { margin-left: auto; color: var(--muted); }
 .nav-social:hover { color: var(--gold-dark); }
 
@@ -154,6 +172,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   border-radius: 999px;
 }
 .search-input:focus { border-color: var(--gold); background: var(--white); }
+.search-input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .search-icon { position: absolute; top: 50%; left: 0.7rem; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .search-toggle { display: none; }
 
@@ -296,15 +315,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 2.4rem 3rem;
+  gap: 1rem 2rem;
 }
 .brand-chip {
+  min-height: 44px;
+  padding: 0.55rem 1rem;
   font: 500 1.15rem/1 var(--font-display);
   color: var(--ink);
   opacity: 0.75;
+  border-bottom: 1px solid transparent;
   transition: var(--ease);
 }
-.brand-chip:hover { opacity: 1; color: var(--gold-dark); }
+.brand-chip:hover, .brand-chip:focus-visible { opacity: 1; color: var(--gold-dark); border-bottom-color: var(--gold); }
 .brands-note { text-align: center; margin-top: 1.4rem; font-size: 0.78rem; color: var(--muted); }
 
 /* ============================================================
@@ -471,6 +493,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   aspect-ratio: 3 / 2;
   overflow: hidden;
   background: #f1eee8;
+  cursor: pointer;
 }
 .product-image {
   width: 100%;
@@ -508,12 +531,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   backdrop-filter: blur(6px);
   transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
+.product-image-nav[hidden] { display: none; }
 .product-image-prev { left: 0.65rem; }
 .product-image-next { right: 0.65rem; }
 .product-image-nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .product-card:hover .product-image-nav,
 .product-card:focus-within .product-image-nav { opacity: 1; pointer-events: auto; }
 .product-image-nav:hover { color: var(--white); background: var(--gold-dark); transform: translateY(-50%) scale(1.06); }
+
+/* Telas de toque não têm "hover": as setas ficam sempre acessíveis. */
+@media (hover: none) {
+  .product-image-nav { opacity: 1; pointer-events: auto; }
+}
 
 .product-content {
   display: flex;
@@ -542,6 +571,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .btn-try-on:hover { background: var(--gold); color: var(--black); }
 
 .empty-state { text-align: center; padding: 4rem 1rem; color: var(--muted); }
+.empty-state[hidden] { display: none; }
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; margin-top: 1.4rem; }
+.noscript-note { padding: 2rem 1rem; text-align: center; color: var(--muted); }
+.noscript-note a { color: var(--gold-dark); font-weight: 700; text-decoration: underline; }
 .catalog-more {
   position: absolute;
   z-index: 2;
@@ -612,6 +645,32 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .instagram-cta:hover { color: var(--gold); }
 
 /* ============================================================
+   WHATSAPP FLUTUANTE
+   ============================================================ */
+.whatsapp-float {
+  position: fixed;
+  right: 1.25rem;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 52px;
+  padding: 0 1.2rem;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-size: 0.84rem;
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(17, 17, 17, 0.28);
+  transition: var(--ease);
+}
+.whatsapp-float svg { flex: 0 0 auto; color: var(--gold); transition: color 0.2s ease; }
+.whatsapp-float:hover { background: var(--gold-dark); border-color: var(--gold-dark); transform: translateY(-2px); }
+.whatsapp-float:hover svg { color: var(--white); }
+
+/* ============================================================
    FOOTER
    ============================================================ */
 .footer { padding: 0 0 1.5rem; background: var(--black); color: var(--white); }
@@ -665,6 +724,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   width: min(920px, 100%);
   max-height: 92vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--white);
   padding: 2.2rem;
 }
@@ -684,10 +744,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .modal-close:hover { background: var(--black); color: var(--white); }
 
 .modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2rem; padding-top: 0.6rem; }
-.product-detail-image { position: relative; background: var(--cream); }
+.product-detail-image { position: relative; background: var(--cream); touch-action: pan-y; }
 .product-detail-image img { width: 100%; height: 100%; min-height: 320px; object-fit: contain; }
 .gallery-nav { position: absolute; left: 0; right: 0; bottom: 0.8rem; display: flex; justify-content: center; gap: 0.4rem; }
-.gallery-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(17,17,17,0.25); }
+.gallery-nav[hidden] { display: none; }
+.gallery-dot { position: relative; width: 9px; height: 9px; border-radius: 50%; background: rgba(17,17,17,0.25); }
+/* Área de toque maior que o ponto visível (mínimo recomendado ~24px) */
+.gallery-dot::after { position: absolute; inset: -8px; content: ''; }
 .gallery-dot.is-active { background: var(--gold-dark); }
 
 .product-detail-info { padding: 0.4rem 0; display: flex; flex-direction: column; }
@@ -797,7 +860,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* ============================================================
    TOAST
    ============================================================ */
-.toast-container { position: fixed; right: 1rem; bottom: 1rem; z-index: 200; display: grid; gap: 0.5rem; max-width: 320px; }
+.toast-container { position: fixed; right: 1rem; bottom: 5.5rem; z-index: 200; display: grid; gap: 0.5rem; max-width: 320px; }
 .toast {
   padding: 0.9rem 1.1rem;
   background: var(--black);
@@ -926,14 +989,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     padding: calc(5.5rem + env(safe-area-inset-top)) 1.5rem calc(2rem + env(safe-area-inset-bottom));
     gap: 1.6rem;
     transform: translateX(100%);
-    transition: transform 0.35s ease;
+    /* Fechado, o menu fica invisível e fora da ordem de tabulação do teclado. */
+    visibility: hidden;
+    transition: transform 0.35s ease, visibility 0s linear 0.35s;
     z-index: 45;
     box-shadow: var(--shadow-strong);
     border-left: 1px solid var(--border);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .navbar-menu.is-open { transform: translateX(0); }
+  .navbar-menu.is-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
   .nav-toggle { position: relative; z-index: 46; }
   .nav-social { margin-left: 0; }
   .search-box { display: none; }
@@ -1018,10 +1083,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .hero-buttons .btn-primary, .hero-buttons .btn-secondary { width: 100%; min-height: 46px; }
 
   .brands-section { padding: 2rem 0; }
-  .brands-heading { margin-bottom: 1.2rem; }
-  .brands-row { gap: 1.1rem 1.5rem; }
+  .brands-heading { margin-bottom: 0.6rem; }
+  .brands-row { gap: 0.2rem 0.8rem; }
   .brand-chip { font-size: 1.05rem; }
-  .brands-note { margin-top: 1rem; }
+  .brands-note { margin-top: 0.8rem; }
 
   .section-title { font-size: clamp(1.8rem, 8vw, 2.2rem); }
   .section-subtitle { font-size: 0.94rem; }
@@ -1037,7 +1102,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .filter-trigger { min-height: 50px; padding: 0.55rem 0.65rem; }
   .filter-trigger-value { font-size: 0.76rem; }
   .filter-control-label { font-size: 0.6rem; }
-  .btn-clear-filters { grid-column: 1 / -1; margin-left: 0; justify-self: start; }
+  .btn-clear-filters { grid-column: 1 / -1; margin-left: 0; justify-self: start; min-height: 44px; }
   .results-bar { margin-bottom: 0.85rem; font-size: 0.8rem; }
 
   .products-section { padding-bottom: 3.5rem; }
@@ -1072,6 +1137,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .instagram-gallery { grid-template-columns: repeat(2, 1fr); }
   .instagram-gallery { gap: 0.4rem; margin: 1.5rem 0; }
   .instagram-gallery img { border-radius: 0.4rem; }
+
+  /* Botão flutuante vira um círculo só com o ícone */
+  .whatsapp-float { right: 0.9rem; bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px)); width: 52px; padding: 0; justify-content: center; }
+  .whatsapp-float-label { display: none; }
+  .toast-container { right: 0.75rem; left: 0.75rem; bottom: 4.5rem; max-width: none; }
 
   .footer-content { grid-template-columns: 1fr; gap: 1.6rem; padding-bottom: 2rem; }
   .footer-photo-banner { height: 150px; margin-bottom: 1.5rem; }

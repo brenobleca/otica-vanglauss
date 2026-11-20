@@ -105,7 +105,7 @@ const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, gener
     : Array.from({ length: quantidadeFotos }, (_, indice) =>
         `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.png`
       );
-  return { id, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
+  return { id, codigo, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
 });
 
 const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux'];
@@ -141,6 +141,7 @@ function cacheElements() {
   el.showMore = document.getElementById('show-more-products');
   el.catalogMore = document.querySelector('.catalog-more');
   el.productsWrap = document.getElementById('products-grid-wrap');
+  el.catalogSection = document.getElementById('oculos');
   el.toastContainer = document.getElementById('toast-container');
   el.navToggle = document.getElementById('nav-toggle');
   el.navMenu = document.getElementById('navbar-menu');
@@ -156,6 +157,24 @@ function formatPrice(value) {
 
 function categoriaLabel(cat) {
   return cat === 'solar' ? 'Óculos de Sol' : 'Óculos de Grau';
+}
+
+// Remove acentos e caixa para que "acetato", "Acetáto" e "ÓCULOS" encontrem o mesmo.
+function normalizeText(text) {
+  return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function scrollToTarget(selector) {
+  const target = document.querySelector(selector);
+  if (!target) return;
+  target.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
 function showToast(message, type = 'success') {
@@ -186,6 +205,17 @@ function whatsappLink(message) {
 }
 
 /* ---------- MODAIS (genérico, acessível) ---------- */
+// Enquanto um modal está aberto, o restante da página fica "inert":
+// o foco do teclado e leitores de tela não escapam para trás do modal.
+const INERT_SELECTOR = 'header.navbar, main, footer.footer, .whatsapp-float, .skip-link';
+
+function setPageInert(isInert) {
+  document.querySelectorAll(INERT_SELECTOR).forEach((node) => {
+    if (isInert) node.setAttribute('inert', '');
+    else node.removeAttribute('inert');
+  });
+}
+
 function openModal(modalId, triggerEl = null) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
@@ -193,6 +223,7 @@ function openModal(modalId, triggerEl = null) {
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
+  setPageInert(true);
   const closeBtn = modal.querySelector('.modal-close');
   closeBtn?.focus();
 }
@@ -202,7 +233,10 @@ function closeModal(modalId) {
   if (!modal) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('no-scroll');
+  if (!document.querySelector('.modal.open')) {
+    document.body.classList.remove('no-scroll');
+    setPageInert(false);
+  }
   if (modalId === 'tryon-modal') stopTryOn();
   lastFocusedElement?.focus?.();
 }
@@ -213,9 +247,13 @@ function setupModalClosers() {
     modal.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(modal.id));
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
     const openModalEl = document.querySelector('.modal.open');
-    if (openModalEl) closeModal(openModalEl.id);
+    if (!openModalEl) return;
+    if (e.key === 'Escape') {
+      closeModal(openModalEl.id);
+    } else if (openModalEl.id === 'product-modal' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      stepGallery(e.key === 'ArrowRight' ? 1 : -1);
+    }
   });
 }
 
@@ -242,6 +280,7 @@ function setupMobileNav() {
     el.navToggle.setAttribute('aria-expanded', 'false');
     el.navToggle.setAttribute('aria-label', 'Abrir menu');
     document.body.classList.remove('no-scroll');
+    el.navToggle.focus();
   });
 }
 
@@ -275,28 +314,65 @@ function setupMobileSearch() {
 }
 
 /* ---------- MARCAS ---------- */
+function brandSlug(marca) {
+  return marca.toLowerCase().replace(/\s+/g, '-');
+}
+
 function renderBrandsStrip() {
   if (!el.brandsRow) return;
   el.brandsRow.innerHTML = marcasDestaque
-    .map((marca) => `<span class="brand-chip">${marca}</span>`)
+    .map((marca) => `<button type="button" class="brand-chip" data-brand="${brandSlug(marca)}" aria-label="Ver modelos da marca ${marca}">${marca}</button>`)
     .join('');
+  el.brandsRow.addEventListener('click', (event) => {
+    const chip = event.target.closest('.brand-chip');
+    if (chip) filterByBrand(chip.dataset.brand);
+  });
+}
+
+function filterByBrand(slug) {
+  state.marca = slug;
+  if (el.brandFilter) {
+    el.brandFilter.value = slug;
+    syncFilterControl(el.brandFilter);
+  }
+  renderProducts();
+  scrollToTarget('#oculos');
 }
 
 /* ---------- FILTROS / CATÁLOGO ---------- */
+// Texto pesquisável de cada produto, calculado uma única vez.
+produtos.forEach((p) => {
+  p.busca = normalizeText(
+    [p.nome, p.codigo, p.marca, categoriaLabel(p.categoria), p.genero, p.descricao].join(' ')
+  );
+});
+
+function compareByPrice(direction) {
+  // Produtos sem preço ("Consulte valores") sempre ficam no final.
+  return (a, b) => {
+    if (a.preco == null && b.preco == null) return 0;
+    if (a.preco == null) return 1;
+    if (b.preco == null) return -1;
+    return direction * (a.preco - b.preco);
+  };
+}
+
 function getFilteredProducts() {
-  const termo = state.search.trim().toLowerCase();
+  // Cada palavra digitada precisa aparecer em algum campo do produto
+  // (ex.: "solar feminino" ou "acetato azul").
+  const termos = normalizeText(state.search).split(/\s+/).filter(Boolean);
   let lista = produtos.filter((p) => {
-    const nomeMatch = !termo || p.nome.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo) || p.descricao.toLowerCase().includes(termo);
+    const nomeMatch = termos.every((termo) => p.busca.includes(termo));
     const categoriaMatch = state.categoria === 'all' || p.categoria === state.categoria;
     const generoMatch = state.genero === 'all' || p.genero === state.genero;
-    const marcaMatch = state.marca === 'all' || p.marca.toLowerCase().replace(/\s+/g, '-') === state.marca;
+    const marcaMatch = state.marca === 'all' || brandSlug(p.marca) === state.marca;
     return nomeMatch && categoriaMatch && generoMatch && marcaMatch;
   });
 
   switch (state.ordenar) {
-    case 'preco-asc': lista = lista.sort((a, b) => a.preco - b.preco); break;
-    case 'preco-desc': lista = lista.sort((a, b) => b.preco - a.preco); break;
-    case 'nome': lista = lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); break;
+    case 'preco-asc': lista = lista.sort(compareByPrice(1)); break;
+    case 'preco-desc': lista = lista.sort(compareByPrice(-1)); break;
+    case 'nome': lista = lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true })); break;
     default: break;
   }
   return lista;
@@ -376,10 +452,14 @@ function renderProducts(resetVisibleCount = true) {
     const id = Number(card.dataset.id);
     const produto = produtos.find((item) => item.id === id);
     const image = card.querySelector('.product-image');
+    const imageWrapper = card.querySelector('.product-image-wrapper');
     let imageIndex = 0;
     const showImage = (direction) => {
       if (!produto?.imagens?.length) return;
       imageIndex = (imageIndex + direction + produto.imagens.length) % produto.imagens.length;
+      // Se uma foto anterior falhou ao carregar, tenta de novo com a nova.
+      imageWrapper?.classList.remove('img-error');
+      image.style.display = '';
       image.src = produto.imagens[imageIndex];
       image.alt = `${produto.nome} — ${produto.marca}, foto ${imageIndex + 1}`;
     };
@@ -389,7 +469,6 @@ function renderProducts(resetVisibleCount = true) {
     });
     card.querySelector('[data-action="previous-image"]')?.addEventListener('click', () => showImage(-1));
     card.querySelector('[data-action="next-image"]')?.addEventListener('click', () => showImage(1));
-    const imageWrapper = card.querySelector('.product-image-wrapper');
     let swipeStart = null;
     imageWrapper?.addEventListener('touchstart', (event) => {
       el.produtos.querySelectorAll('.product-card.is-image-controls-visible').forEach((activeCard) => {
@@ -412,6 +491,11 @@ function renderProducts(resetVisibleCount = true) {
     imageWrapper?.addEventListener('touchcancel', () => {
       swipeStart = null;
     }, { passive: true });
+    // Tocar/clicar na foto abre os detalhes (o botão "Detalhes" continua para teclado).
+    imageWrapper?.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      showProductDetail(id, card.querySelector('[data-action="detail"]'));
+    });
     card.querySelector('[data-action="detail"]').addEventListener('click', () => showProductDetail(id, card));
     card.querySelector('[data-action="tryon"]').addEventListener('click', () => openTryOn(id, card));
   });
@@ -560,13 +644,35 @@ function enhanceFilterControl(select) {
   syncFilterControl(select);
 }
 
+// Ao buscar pelo menu (que fica no topo), leva a pessoa até os resultados.
+function revealCatalogIfOffscreen() {
+  if (!el.catalogSection) return;
+  const rect = el.catalogSection.getBoundingClientRect();
+  const isVisible = rect.top < window.innerHeight * 0.5 && rect.bottom > 80;
+  if (!isVisible) scrollToTarget('#oculos');
+}
+
 function setupFilters() {
+  // Enquanto nenhum produto tiver preço cadastrado, ordenar por preço não
+  // faz sentido: as opções são ocultadas e voltam sozinhas quando houver preços.
+  if (el.sortFilter && !produtos.some((p) => p.preco != null)) {
+    Array.from(el.sortFilter.options).forEach((option) => {
+      if (option.value.startsWith('preco')) option.remove();
+    });
+  }
+
   document.querySelectorAll('.filters-bar .filter-select').forEach(enhanceFilterControl);
   document.addEventListener('click', (event) => {
     if (event.target.closest('.filter-control')) return;
     document.querySelectorAll('.filter-control').forEach((control) => closeFilterControl(control));
   });
-  el.search?.addEventListener('input', (e) => { state.search = e.target.value; renderProducts(); });
+  let searchScrollTimer;
+  el.search?.addEventListener('input', (e) => {
+    state.search = e.target.value;
+    renderProducts();
+    window.clearTimeout(searchScrollTimer);
+    if (state.search.trim()) searchScrollTimer = window.setTimeout(revealCatalogIfOffscreen, 350);
+  });
   el.categoryFilter?.addEventListener('change', (e) => { state.categoria = e.target.value; renderProducts(); });
   el.genderFilter?.addEventListener('change', (e) => { state.genero = e.target.value; renderProducts(); });
   el.brandFilter?.addEventListener('change', (e) => { state.marca = e.target.value; renderProducts(); });
@@ -598,6 +704,8 @@ function showProductDetail(productId, triggerEl) {
   document.getElementById('detail-description').textContent = currentProduct.descricao;
   document.getElementById('detail-price').textContent = formatPrice(currentProduct.preco);
 
+  const nav = document.getElementById('gallery-nav');
+  if (nav) nav.innerHTML = ''; // força recriar os pontos para o novo produto
   renderGallery();
   openModal('product-modal', triggerEl);
 }
@@ -606,8 +714,13 @@ function capitalize(text) {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }
 
+function getCurrentGalleryImages() {
+  if (!currentProduct) return [];
+  return currentProduct.imagens?.length ? currentProduct.imagens : [currentProduct.imagem];
+}
+
 function renderGallery() {
-  const imagens = currentProduct.imagens?.length ? currentProduct.imagens : [currentProduct.imagem];
+  const imagens = getCurrentGalleryImages();
   const img = document.getElementById('detail-image');
   img.src = imagens[currentGalleryIndex] || imagens[0];
   img.alt = `${currentProduct.nome} — foto ${currentGalleryIndex + 1} de ${imagens.length}`;
@@ -619,15 +732,51 @@ function renderGallery() {
     return;
   }
   nav.hidden = false;
-  nav.innerHTML = imagens.map((_, i) =>
-    `<button type="button" class="gallery-dot ${i === currentGalleryIndex ? 'is-active' : ''}" data-index="${i}" aria-label="Ver foto ${i + 1}"></button>`
-  ).join('');
-  nav.querySelectorAll('.gallery-dot').forEach((dot) => {
-    dot.addEventListener('click', () => {
-      currentGalleryIndex = Number(dot.dataset.index);
-      renderGallery();
+  // Os pontos são criados uma vez por produto; depois só trocamos o estado,
+  // assim o foco do teclado não se perde ao navegar pelas fotos.
+  if (nav.children.length !== imagens.length) {
+    nav.innerHTML = imagens.map((_, i) =>
+      `<button type="button" class="gallery-dot" data-index="${i}" aria-label="Ver foto ${i + 1} de ${imagens.length}"></button>`
+    ).join('');
+    nav.querySelectorAll('.gallery-dot').forEach((dot) => {
+      dot.addEventListener('click', () => {
+        currentGalleryIndex = Number(dot.dataset.index);
+        renderGallery();
+      });
     });
+  }
+  nav.querySelectorAll('.gallery-dot').forEach((dot, i) => {
+    const isActive = i === currentGalleryIndex;
+    dot.classList.toggle('is-active', isActive);
+    if (isActive) dot.setAttribute('aria-current', 'true');
+    else dot.removeAttribute('aria-current');
   });
+}
+
+function stepGallery(direction) {
+  const total = getCurrentGalleryImages().length;
+  if (total <= 1) return;
+  currentGalleryIndex = (currentGalleryIndex + direction + total) % total;
+  renderGallery();
+}
+
+function setupGallerySwipe() {
+  const area = document.querySelector('.product-detail-image');
+  if (!area) return;
+  let start = null;
+  area.addEventListener('touchstart', (event) => {
+    const touch = event.changedTouches[0];
+    start = { x: touch.clientX, y: touch.clientY };
+  }, { passive: true });
+  area.addEventListener('touchend', (event) => {
+    if (!start) return;
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    start = null;
+    if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    stepGallery(deltaX < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 /* ---------- WHATSAPP ---------- */
@@ -654,6 +803,7 @@ const tryOn = {
   faceLandmarker: null,
   landmarkerLoading: null,
   rafId: null,
+  session: 0,            // incrementa a cada abrir/fechar; cancela inícios assíncronos obsoletos
   overlays: {},          // { esquerda, frontal, direita } -> canvas com transparência
   overlaysLoading: false,
   smoothed: null,        // último estado suavizado {x,y,w,h,rot,angleKey}
@@ -689,6 +839,8 @@ function tryOnEls() {
 function setTryOnStatus(message, kind = 'info') {
   const { status } = tryOnEls();
   if (!status) return;
+  // Evita reescrever o mesmo texto a cada frame (a região é aria-live).
+  if (status.textContent === message && status.dataset.kind === kind) return;
   status.textContent = message;
   status.dataset.kind = kind;
 }
@@ -705,13 +857,14 @@ function openTryOn(productId, triggerEl = null) {
 async function startTryOn() {
   const { video, canvas, threeCanvas, permissionPanel } = tryOnEls();
   if (tryOn.stream) stopTryOn();
+  const session = ++tryOn.session;
+  const isStale = () => session !== tryOn.session || !tryOn.active;
   if (permissionPanel) permissionPanel.hidden = true;
   tryOn.video = video;
   tryOn.canvas = canvas;
   tryOn.threeCanvas = threeCanvas;
   tryOn.ctx = canvas.getContext('2d');
   tryOn.active = true;
-  if (permissionPanel) permissionPanel.hidden = true;
 
   if (!window.isSecureContext) {
     setTryOnStatus('O provador virtual exige uma conexão segura (HTTPS). Acesse o site via HTTPS para usar a câmera.', 'error');
@@ -728,18 +881,26 @@ async function startTryOn() {
   setTryOnStatus('Solicitando acesso à câmera…', 'loading');
 
   try {
-    tryOn.stream = await requestCameraStream();
+    const stream = await requestCameraStream();
+    // Se o provador foi fechado enquanto o navegador pedia permissão,
+    // a câmera precisa ser desligada — senão ela ficaria ligada em segundo plano.
+    if (isStale()) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    tryOn.stream = stream;
     if (permissionPanel) permissionPanel.hidden = true;
-    video.srcObject = tryOn.stream;
+    video.srcObject = stream;
     await video.play().catch(() => {});
     setTryOnStatus('Carregando o reconhecimento facial…', 'loading');
     // O GLB é carregado em paralelo; o PNG continua disponível enquanto isso.
     ensureThreeModel();
     await ensureFaceLandmarker();
-    if (!tryOn.active) return; // usuário fechou durante o carregamento
+    if (isStale()) return; // usuário fechou durante o carregamento
     setTryOnStatus('Posicione seu rosto dentro da área indicada.', 'info');
-    runTrackingLoop();
+    runTrackingLoop(session);
   } catch (error) {
+    if (session !== tryOn.session) return;
     console.error('Erro ao acessar a câmera:', error);
     if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
       showPermissionPanel('Para usar o provador virtual, permita o acesso à câmera nas configurações do navegador.');
@@ -781,6 +942,7 @@ function showPermissionPanel(message) {
 
 function stopTryOn() {
   tryOn.active = false;
+  tryOn.session += 1;
   tryOn.stream?.getTracks().forEach((track) => track.stop());
   tryOn.stream = null;
   if (tryOn.video) tryOn.video.srcObject = null;
@@ -897,6 +1059,8 @@ async function ensureFaceLandmarker() {
     } catch (error) {
       console.error('Falha ao carregar o reconhecimento facial:', error);
       setTryOnStatus('O reconhecimento facial não pôde ser carregado. Você ainda pode ver a câmera.', 'error');
+      // Permite nova tentativa na próxima abertura do provador.
+      tryOn.landmarkerLoading = null;
       return null;
     }
   })();
@@ -919,13 +1083,16 @@ function loadOverlaysForCurrentProduct() {
 
 function loadOverlayImage(path, chave) {
   if (!path) return;
+  const productAtStart = currentProduct;
   const image = new Image();
   image.crossOrigin = 'anonymous';
   image.onload = () => {
+    // Ignora se o usuário já trocou de produto enquanto a imagem carregava.
+    if (productAtStart !== currentProduct) return;
     const canvas = document.createElement('canvas');
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(image, 0, 0);
 
     // Se o PNG já possui canal alfa real (bordas transparentes), não mexemos
@@ -971,9 +1138,9 @@ function stripNearWhiteBackgroundSafely(ctx, w, h) {
 }
 
 /* ---- Loop de rastreamento ---- */
-function runTrackingLoop() {
+function runTrackingLoop(session) {
   const loop = () => {
-    if (!tryOn.active || !tryOn.stream) return;
+    if (!tryOn.active || !tryOn.stream || session !== tryOn.session) return;
     const { video, canvas, ctx } = tryOn;
     if (video.videoWidth && tryOn.faceLandmarker) {
       if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
@@ -1141,6 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProducts();
   setupFilters();
   setupModalClosers();
+  setupGallerySwipe();
   setupMobileNav();
   setupMobileSearch();
 
@@ -1148,12 +1316,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('detail-whatsapp-btn')?.addEventListener('click', contactViaWhatsApp);
   document.getElementById('contact-whatsapp-btn')?.addEventListener('click', openWhatsAppGeral);
   document.getElementById('contact-maps-btn')?.addEventListener('click', openMaps);
+  document.getElementById('hero-whatsapp-btn')?.addEventListener('click', openWhatsAppGeral);
+  document.getElementById('empty-whatsapp')?.addEventListener('click', openWhatsAppGeral);
+  document.getElementById('empty-clear')?.addEventListener('click', clearAllFilters);
   document.getElementById('tryon-capture')?.addEventListener('click', capturePhoto);
   document.getElementById('tryon-retry')?.addEventListener('click', startTryOn);
 
+  // O link do botão flutuante usa o mesmo telefone/mensagem definidos em CONFIG.
+  const whatsappFloat = document.getElementById('whatsapp-float');
+  if (whatsappFloat) whatsappFloat.href = whatsappLink(CONFIG.mensagens.geral);
+
   document.querySelectorAll('[data-scroll-to]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      document.querySelector(btn.dataset.scrollTo)?.scrollIntoView({ behavior: 'smooth' });
-    })
+    btn.addEventListener('click', () => scrollToTarget(btn.dataset.scrollTo))
   );
 });
