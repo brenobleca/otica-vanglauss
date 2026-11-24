@@ -83,16 +83,16 @@ const fotosSemEtiqueta = {
   36: ['extra-1', 'extra-2', 'extra-3']
 };
 const assetsProvador = {
-  1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb', imagemProvador: 'img/oculos-png/download.png' },
-  2: { modelo3D: 'modelos-3d/02-VG-H00135.glb', imagemProvador: 'img/oculos-png/download (1).png' },
-  3: { modelo3D: 'modelos-3d/t2.glb', imagemProvador: 'img/oculos-png/download (2).png' },
-  4: { imagemProvador: 'img/oculos-png/download (3).png' },
-  5: { modelo3D: 'modelos-3d/t-1211-2.glb', imagemProvador: 'img/oculos-png/download (4).png' },
-  6: { imagemProvador: 'img/oculos-png/download (5).png' },
-  7: { imagemProvador: 'img/oculos-png/download (6).png' },
-  8: { imagemProvador: 'img/oculos-png/download (7).png' },
-  9: { imagemProvador: 'img/oculos-png/download (8).png' },
-  10: { modelo3D: 'modelos-3d/t-1211-4.glb' }
+  1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb' },
+  2: { modelo3D: 'modelos-3d/02-VG-H00135.glb' },
+  3: { modelo3D: 'modelos-3d/03-OXFOUR-LUX-SDM2018.glb' },
+  5: { modelo3D: 'modelos-3d/05-VG-JC-84026.glb' },
+  6: { modelo3D: 'modelos-3d/06-VG-JC-1201.glb' },
+  10: { modelo3D: 'modelos-3d/10-OXFOUR-LUX-HR-MM-1007.glb' },
+  47: { modelo3D: 'modelos-3d/t2.glb' },
+  48: { modelo3D: 'modelos-3d/t-1211-4.glb' },
+  49: { modelo3D: 'modelos-3d/t-1211-2.glb' },
+  50: { modelo3D: 'modelos-3d/oculos-t-2.glb' }
 };
 const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
   const marcaArquivo = [14, 35].includes(id) ? 'BALGRIF' : marca.toUpperCase().replace(/\s+/g, '-');
@@ -877,8 +877,13 @@ async function startTryOn() {
     return;
   }
 
-  loadOverlaysForCurrentProduct();
-  setTryOnStatus('Solicitando acesso à câmera…', 'loading');
+  tryOn.overlays = {};
+  setTryOnStatus(
+    currentProduct?.modelo3D
+      ? 'Solicitando acesso à câmera…'
+      : 'Modelo 3D não disponível ainda.',
+    currentProduct?.modelo3D ? 'loading' : 'warn'
+  );
 
   try {
     const stream = await requestCameraStream();
@@ -892,12 +897,21 @@ async function startTryOn() {
     if (permissionPanel) permissionPanel.hidden = true;
     video.srcObject = stream;
     await video.play().catch(() => {});
-    setTryOnStatus('Carregando o reconhecimento facial…', 'loading');
-    // O GLB é carregado em paralelo; o PNG continua disponível enquanto isso.
+    setTryOnStatus(
+      currentProduct?.modelo3D
+        ? 'Carregando o reconhecimento facial…'
+        : 'Modelo 3D não disponível ainda.',
+      currentProduct?.modelo3D ? 'loading' : 'warn'
+    );
     ensureThreeModel();
     await ensureFaceLandmarker();
     if (isStale()) return; // usuário fechou durante o carregamento
-    setTryOnStatus('Posicione seu rosto dentro da área indicada.', 'info');
+    setTryOnStatus(
+      currentProduct?.modelo3D
+        ? 'Posicione seu rosto dentro da área indicada.'
+        : 'Modelo 3D não disponível ainda.',
+      currentProduct?.modelo3D ? 'info' : 'warn'
+    );
     runTrackingLoop(session);
   } catch (error) {
     if (session !== tryOn.session) return;
@@ -1008,7 +1022,8 @@ async function ensureThreeModel() {
     resizeThreeCanvas();
     return true;
   })().catch((error) => {
-    console.warn('Modelo 3D indisponível; usando imagem de fallback.', error);
+    console.warn('Modelo 3D indisponível.', error);
+    setTryOnStatus('Modelo 3D não disponível ainda.', 'warn');
     return false;
   }).finally(() => {
     if (tryOn.threeLoadingPath === modelPath) {
@@ -1068,75 +1083,6 @@ async function ensureFaceLandmarker() {
   return tryOn.landmarkerLoading;
 }
 
-/* ---- Overlays (imagens dos óculos com transparência) ---- */
-function loadOverlaysForCurrentProduct() {
-  tryOn.overlays = {};
-  if (!currentProduct) return;
-
-  const angulos = currentProduct.provadorAngulos;
-  if (angulos) {
-    Object.entries(angulos).forEach(([chave, src]) => loadOverlayImage(src, chave));
-  } else {
-    loadOverlayImage(currentProduct.imagemProvador || currentProduct.imagem, 'frontal');
-  }
-}
-
-function loadOverlayImage(path, chave) {
-  if (!path) return;
-  const productAtStart = currentProduct;
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.onload = () => {
-    // Ignora se o usuário já trocou de produto enquanto a imagem carregava.
-    if (productAtStart !== currentProduct) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(image, 0, 0);
-
-    // Se o PNG já possui canal alfa real (bordas transparentes), não mexemos
-    // nos pixels — é a forma correta e segura de recortar os óculos.
-    // Só aplicamos uma remoção conservadora de fundo branco quando o asset
-    // claramente não tem transparência (todos os cantos opacos e muito claros).
-    if (!hasRealAlpha(ctx, canvas.width, canvas.height)) {
-      stripNearWhiteBackgroundSafely(ctx, canvas.width, canvas.height);
-    }
-    tryOn.overlays[chave] = canvas;
-  };
-  image.onerror = () => {
-    console.warn(`Não foi possível carregar o asset do provador: ${path}`);
-  };
-  image.src = path;
-}
-
-function hasRealAlpha(ctx, w, h) {
-  // Amostra os 4 cantos: se algum já for transparente, o PNG tem alfa real.
-  const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]];
-  return corners.some(([x, y]) => {
-    const [, , , a] = ctx.getImageData(x, y, 1, 1).data;
-    return a < 250;
-  });
-}
-
-function stripNearWhiteBackgroundSafely(ctx, w, h) {
-  // Remoção conservadora: só torna transparente um pixel muito próximo do
-  // branco (>250 em todos os canais) E com baixíssima diferença entre canais
-  // (fundo neutro), reduzindo o risco de apagar partes brancas da própria
-  // armação. Assets sem transparência real ainda são a exceção — o ideal é
-  // sempre usar PNG com alfa.
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    if (r > 250 && g > 250 && b > 250 && (max - min) < 4) {
-      data[i + 3] = 0;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-}
-
 /* ---- Loop de rastreamento ---- */
 function runTrackingLoop(session) {
   const loop = () => {
@@ -1152,10 +1098,19 @@ function runTrackingLoop(session) {
       const landmarks = result.faceLandmarks?.[0];
 
       if (landmarks) {
-        setTryOnStatus('Rosto detectado — mova a cabeça devagar para ver de outros ângulos.', 'success');
-        drawGlasses(ctx, landmarks, canvas.width, canvas.height);
+        if (!currentProduct?.modelo3D) {
+          setTryOnStatus('Modelo 3D não disponível ainda.', 'warn');
+        } else {
+          setTryOnStatus('Rosto detectado — mova a cabeça devagar para ver de outros ângulos.', 'success');
+          drawGlasses(ctx, landmarks, canvas.width, canvas.height);
+        }
       } else {
-        setTryOnStatus('Não foi possível detectar seu rosto. Ajuste a iluminação e centralize o rosto.', 'warn');
+        setTryOnStatus(
+          currentProduct?.modelo3D
+            ? 'Não foi possível detectar seu rosto. Ajuste a iluminação e centralize o rosto.'
+            : 'Modelo 3D não disponível ainda.',
+          'warn'
+        );
       }
     }
     tryOn.rafId = requestAnimationFrame(loop);
