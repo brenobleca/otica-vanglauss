@@ -88,6 +88,7 @@ const assetsProvador = {
   3: { modelo3D: 'modelos-3d/03-OXFOUR-LUX-SDM2018.glb' },
   5: { modelo3D: 'modelos-3d/05-VG-JC-84026.glb' },
   6: { modelo3D: 'modelos-3d/06-VG-JC-1201.glb' },
+  7: { modelo3D: 'modelos-3d/07-VG-OM2511.glb' },
   10: { modelo3D: 'modelos-3d/10-OXFOUR-LUX-HR-MM-1007.glb' },
   25: { modelo3D: 'modelos-3d/25-KAZUALY-LUX-SDA-3018.glb' },
   26: { modelo3D: 'modelos-3d/26-VG-ZS-1162.glb' },
