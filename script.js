@@ -83,16 +83,19 @@ const fotosSemEtiqueta = {
   36: ['extra-1', 'extra-2', 'extra-3']
 };
 const assetsProvador = {
-  1: { modelo3D: 'modelos-3d/01-vg-bg7618.glb' },
+  1: { modelo3D: 'modelos-3d/01-VG-BG7618.glb' },
   2: { modelo3D: 'modelos-3d/02-VG-H00135.glb' },
   3: { modelo3D: 'modelos-3d/03-OXFOUR-LUX-SDM2018.glb' },
   5: { modelo3D: 'modelos-3d/05-VG-JC-84026.glb' },
   6: { modelo3D: 'modelos-3d/06-VG-JC-1201.glb' },
   10: { modelo3D: 'modelos-3d/10-OXFOUR-LUX-HR-MM-1007.glb' },
+  25: { modelo3D: 'modelos-3d/25-KAZUALY-LUX-SDA-3018.glb' },
+  26: { modelo3D: 'modelos-3d/26-VG-ZS-1162.glb' },
+  29: { modelo3D: 'modelos-3d/29-VG-YY-6131.glb' },
+  30: { modelo3D: 'modelos-3d/30-VG-LQC0347.glb' },
   47: { modelo3D: 'modelos-3d/t2.glb' },
   48: { modelo3D: 'modelos-3d/t-1211-4.glb' },
-  49: { modelo3D: 'modelos-3d/t-1211-2.glb' },
-  50: { modelo3D: 'modelos-3d/oculos-t-2.glb' }
+  49: { modelo3D: 'modelos-3d/t-1211-2.glb' }
 };
 const precosPorModelo = {
   1: 320, 2: 290, 3: 490, 4: 290, 5: 290, 6: 450, 7: 470, 8: 380,
@@ -809,6 +812,7 @@ function openMaps() {
    ============================================================ */
 const TRYON_SMOOTHING = 0.35;
 const GLASSES_EYE_SPAN_RATIO = 1.92;
+const TRYON_FORWARD_DEPTH_RATIO = 0.9;
 
 const tryOn = {
   stream: null,
@@ -1546,7 +1550,7 @@ function drawGlasses(ctx, landmarks, width, height) {
     model.position.set(
       s.x - width / 2,
       height / 2 - s.y,
-      smoothedEyeDistance * 0.08
+      smoothedEyeDistance * TRYON_FORWARD_DEPTH_RATIO
     );
     model.rotation.set(s.pitch, s.yaw, -s.rot);
     updateFaceOccluder(landmarks, width, height, videoToStage);
