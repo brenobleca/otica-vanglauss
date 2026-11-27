@@ -800,8 +800,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   object-position: center;
 }
 .tryon-stage video { transform: scaleX(-1); }
-.tryon-stage #glasses-canvas { transform: scaleX(-1); pointer-events: none; }
-.tryon-stage canvas { transform: scaleX(-1); pointer-events: none; }
+.tryon-stage #glasses-canvas { pointer-events: none; }
+.tryon-stage canvas { pointer-events: none; }
 .tryon-guide {
   position: absolute;
   inset: 12% 22%;

@@ -94,6 +94,15 @@ const assetsProvador = {
   49: { modelo3D: 'modelos-3d/t-1211-2.glb' },
   50: { modelo3D: 'modelos-3d/oculos-t-2.glb' }
 };
+const precosPorModelo = {
+  1: 320, 2: 290, 3: 490, 4: 290, 5: 290, 6: 450, 7: 470, 8: 380,
+  9: 360, 10: 450, 11: 360, 12: 360, 13: 360, 14: 360, 15: 320,
+  16: 290, 17: 360, 18: 360, 20: 360, 21: 360, 23: 360, 24: 360,
+  26: 360, 27: 390, 28: 290, 29: 470, 31: 360, 32: 360, 33: 360,
+  34: 360, 35: 390, 36: 360, 37: 390, 38: 360, 39: 360, 40: 360,
+  41: 360, 42: 390, 43: 390, 44: 450, 45: 360, 46: 450, 47: 450,
+  48: 360, 49: 450, 50: 360
+};
 const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, genero, descricao]) => {
   const marcaArquivo = [14, 35].includes(id) ? 'BALGRIF' : marca.toUpperCase().replace(/\s+/g, '-');
   const quantidadeFotos = quantidadeFotosExtra[id] || 3;
@@ -105,7 +114,7 @@ const produtos = modelosCatalogo.map(([id, codigo, nome, marca, categoria, gener
     : Array.from({ length: quantidadeFotos }, (_, indice) =>
         `img/oculos/${String(id).padStart(2, '0')}-${marcaArquivo}-${codigo}-${indice + 1}.png`
       );
-  return { id, codigo, nome, marca, categoria, genero, preco: null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
+  return { id, codigo, nome, marca, categoria, genero, preco: precosPorModelo[id] ?? null, imagem: imagens[0], imagens, descricao, ...assetsProvador[id] };
 });
 
 const marcasDestaque = ['VG', 'OXFOUR LUX', 'Kazualy Lux'];
@@ -798,6 +807,9 @@ function openMaps() {
 /* ============================================================
    PROVADOR VIRTUAL
    ============================================================ */
+const TRYON_SMOOTHING = 0.35;
+const GLASSES_EYE_SPAN_RATIO = 1.92;
+
 const tryOn = {
   stream: null,
   faceLandmarker: null,
@@ -816,8 +828,17 @@ const tryOn = {
   threeRenderer: null,
   threeScene: null,
   threeCamera: null,
+  threeLibrary: null,
   glassesModel: null,
   glassesModelPath: null,
+  faceOccluder: null,
+  faceOccluderGeometry: null,
+  faceOccluderTriangles: null,
+  faceOccluderInitialized: false,
+  faceOccluderWidth: 0,
+  faceOccluderHeight: 0,
+  nearSideDirection: 0,
+  visibleTempleSide: 0,
   threeLoading: null,
   threeLoadingPath: null,
   modelReady: false
@@ -848,6 +869,11 @@ function setTryOnStatus(message, kind = 'info') {
 function openTryOn(productId, triggerEl = null) {
   currentProduct = produtos.find((p) => p.id === productId);
   if (!currentProduct) return;
+  tryOn.smoothed = null;
+  tryOn.angleHistory = [];
+  tryOn.faceOccluderInitialized = false;
+  tryOn.nearSideDirection = 0;
+  tryOn.visibleTempleSide = 0;
   closeModal('product-modal');
   document.getElementById('tryon-product-name').textContent = currentProduct.nome;
   openModal('tryon-modal', triggerEl);
@@ -964,8 +990,82 @@ function stopTryOn() {
   tryOn.rafId = null;
   tryOn.smoothed = null;
   tryOn.angleHistory = [];
+  tryOn.faceOccluderInitialized = false;
+  tryOn.nearSideDirection = 0;
+  tryOn.visibleTempleSide = 0;
   if (tryOn.ctx && tryOn.canvas) tryOn.ctx.clearRect(0, 0, tryOn.canvas.width, tryOn.canvas.height);
   tryOn.threeRenderer?.clear();
+}
+
+function createTempleIndexVariants(mesh, three, size) {
+  const geometry = mesh.geometry;
+  if (!geometry.index || geometry.groups.length) return null;
+
+  const sourceIndices = geometry.index.array;
+  const positions = geometry.attributes.position.array;
+  const matrix = mesh.matrixWorld.elements;
+  const frameIndices = [];
+  const leftTempleIndices = [];
+  const rightTempleIndices = [];
+  const halfWidth = Math.max(size.x / 2, 0.001);
+  const halfDepth = Math.max(size.z / 2, 0.001);
+
+  for (let index = 0; index < sourceIndices.length; index += 3) {
+    let centerX = 0;
+    let centerZ = 0;
+    for (let vertex = 0; vertex < 3; vertex += 1) {
+      const positionIndex = sourceIndices[index + vertex] * 3;
+      const x = positions[positionIndex];
+      const y = positions[positionIndex + 1];
+      const z = positions[positionIndex + 2];
+      centerX += x * matrix[0] + y * matrix[4] + z * matrix[8] + matrix[12];
+      centerZ += x * matrix[2] + y * matrix[6] + z * matrix[10] + matrix[14];
+    }
+    centerX /= 3;
+    centerZ /= 3;
+
+    const behindFront = -centerZ / (halfDepth * 2);
+    const isTemple = Math.abs(centerX) / halfWidth > 0.55 && behindFront > 0.2;
+    const destination = !isTemple
+      ? frameIndices
+      : centerX < 0
+        ? leftTempleIndices
+        : rightTempleIndices;
+    destination.push(sourceIndices[index], sourceIndices[index + 1], sourceIndices[index + 2]);
+  }
+
+  if (!leftTempleIndices.length || !rightTempleIndices.length) return null;
+  const IndexArray = sourceIndices.constructor;
+  return {
+    full: new IndexArray(sourceIndices),
+    left: new IndexArray([...frameIndices, ...leftTempleIndices]),
+    right: new IndexArray([...frameIndices, ...rightTempleIndices]),
+    currentSide: null
+  };
+}
+
+function updateVisibleTempleSide(model, yaw, nearSideDirection) {
+  const turn = Math.abs(yaw);
+  if (turn < 0.16) {
+    tryOn.visibleTempleSide = 0;
+  } else if (turn > 0.24 && nearSideDirection) {
+    tryOn.visibleTempleSide = nearSideDirection;
+  }
+
+  model.traverse((object) => {
+    const variants = object.userData.templeIndexVariants;
+    if (!variants) return;
+    if (variants.currentSide === tryOn.visibleTempleSide) return;
+    const indices = tryOn.visibleTempleSide < 0
+      ? variants.left
+      : tryOn.visibleTempleSide > 0
+        ? variants.right
+        : variants.full;
+    object.geometry.index.array.set(indices);
+    object.geometry.index.needsUpdate = true;
+    object.geometry.setDrawRange(0, indices.length);
+    variants.currentSide = tryOn.visibleTempleSide;
+  });
 }
 
 async function ensureThreeModel() {
@@ -990,8 +1090,10 @@ async function ensureThreeModel() {
       const keyLight = new three.DirectionalLight(0xffffff, 2.5);
       keyLight.position.set(0, 1, 3);
       tryOn.threeScene.add(keyLight);
-      tryOn.threeCamera = new three.OrthographicCamera(-1, 1, 1, -1, -1000, 1000);
+      tryOn.threeCamera = new three.OrthographicCamera(-1, 1, 1, -1, 1, 2000);
+      tryOn.threeCamera.position.z = 1000;
     }
+    tryOn.threeLibrary = three;
 
     const gltf = await new Promise((resolve, reject) => {
       new GLTFLoader().load(modelPath, resolve, undefined, reject);
@@ -1001,12 +1103,23 @@ async function ensureThreeModel() {
     const bounds = new three.Box3().setFromObject(model);
     const size = bounds.getSize(new three.Vector3());
     const center = bounds.getCenter(new three.Vector3());
-    model.position.sub(center);
-    model.rotation.x = 0;
-    model.rotation.y = 0;
+    model.position.sub(new three.Vector3(center.x, center.y, bounds.max.z));
+    model.updateMatrixWorld(true);
     model.rotation.order = 'YXZ';
-    model.visible = false;
-    model.userData.baseWidth = Math.max(size.x, size.z, 0.001);
+    model.traverse((object) => {
+      if (!object.isMesh) return;
+      object.renderOrder = 1;
+      object.userData.templeIndexVariants = createTempleIndexVariants(object, three, size);
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        material.clippingPlanes = [];
+      });
+    });
+    const anchor = new three.Group();
+    anchor.add(model);
+    anchor.visible = false;
+    anchor.userData.baseWidth = Math.max(size.x, 0.001);
+    anchor.userData.baseDepth = Math.max(size.z, 0.001);
     if (tryOn.glassesModel) {
       tryOn.threeScene.remove(tryOn.glassesModel);
       tryOn.glassesModel.traverse((object) => {
@@ -1015,9 +1128,9 @@ async function ensureThreeModel() {
         else object.material?.dispose();
       });
     }
-    tryOn.glassesModel = model;
+    tryOn.glassesModel = anchor;
     tryOn.glassesModelPath = modelPath;
-    tryOn.threeScene.add(model);
+    tryOn.threeScene.add(anchor);
     tryOn.modelReady = true;
     resizeThreeCanvas();
     return true;
@@ -1037,8 +1150,9 @@ async function ensureThreeModel() {
 
 function resizeThreeCanvas() {
   if (!tryOn.threeRenderer || !tryOn.threeCamera || !tryOn.video) return;
-  const width = tryOn.video.videoWidth || 720;
-  const height = tryOn.video.videoHeight || 720;
+  const stage = tryOnEls().stage;
+  const width = stage?.clientWidth || tryOn.video.videoWidth || 720;
+  const height = stage?.clientHeight || tryOn.video.videoHeight || 720;
   tryOn.threeRenderer.setSize(width, height, false);
   tryOn.threeCamera.left = -width / 2;
   tryOn.threeCamera.right = width / 2;
@@ -1089,13 +1203,16 @@ function runTrackingLoop(session) {
     if (!tryOn.active || !tryOn.stream || session !== tryOn.session) return;
     const { video, canvas, ctx } = tryOn;
     if (video.videoWidth && tryOn.faceLandmarker) {
-      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
-      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+      const stage = tryOnEls().stage;
+      const stageWidth = stage?.clientWidth || video.videoWidth;
+      const stageHeight = stage?.clientHeight || video.videoHeight;
+      if (canvas.width !== stageWidth) canvas.width = stageWidth;
+      if (canvas.height !== stageHeight) canvas.height = stageHeight;
       resizeThreeCanvas();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const result = tryOn.faceLandmarker.detectForVideo(video, performance.now());
-      const landmarks = result.faceLandmarks?.[0];
+      const landmarks = chooseClosestFace(result.faceLandmarks, canvas.width, canvas.height);
 
       if (landmarks) {
         if (!currentProduct?.modelo3D) {
@@ -1105,6 +1222,9 @@ function runTrackingLoop(session) {
           drawGlasses(ctx, landmarks, canvas.width, canvas.height);
         }
       } else {
+        if (tryOn.glassesModel) tryOn.glassesModel.visible = false;
+        if (tryOn.faceOccluder) tryOn.faceOccluder.visible = false;
+        tryOn.threeRenderer?.clear();
         setTryOnStatus(
           currentProduct?.modelo3D
             ? 'Não foi possível detectar seu rosto. Ajuste a iluminação e centralize o rosto.'
@@ -1116,6 +1236,205 @@ function runTrackingLoop(session) {
     tryOn.rafId = requestAnimationFrame(loop);
   };
   loop();
+}
+
+function chooseClosestFace(faceLandmarks, width, height) {
+  if (!faceLandmarks?.length) return null;
+  if (faceLandmarks.length === 1) return faceLandmarks[0];
+
+  return faceLandmarks.reduce((closest, landmarks) => {
+    const nose = landmarks[1];
+    if (!nose) return closest;
+    if (!closest) return landmarks;
+    const closestNose = closest[1];
+    const distance = Math.hypot((nose.x - 0.5) * width, (nose.y - 0.5) * height);
+    const closestDistance = Math.hypot((closestNose.x - 0.5) * width, (closestNose.y - 0.5) * height);
+    return distance < closestDistance ? landmarks : closest;
+  }, null);
+}
+
+function updateFaceOccluder(landmarks, width, height, videoToStage) {
+  const three = tryOn.threeLibrary;
+  const count = Math.min(468, landmarks.length);
+  const glassesModel = tryOn.glassesModel;
+  if (!three || !glassesModel || count < 3) return;
+
+  if (!tryOn.faceOccluder) {
+    const geometry = new three.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const connections = tryOn.faceLandmarker.constructor.FACE_LANDMARKS_TESSELATION;
+    if (!connections?.length || connections.length % 3 !== 0) {
+      throw new Error('A topologia facial do MediaPipe está indisponível.');
+    }
+    const indices = [];
+    for (let index = 0; index < connections.length; index += 3) {
+      const first = connections[index];
+      const second = connections[index + 1];
+      const third = connections[index + 2];
+      if (
+        first.end !== second.start ||
+        second.end !== third.start ||
+        third.end !== first.start
+      ) {
+        throw new Error('A topologia facial do MediaPipe está inconsistente.');
+      }
+      indices.push(first.start, first.end, second.end);
+    }
+    geometry.setAttribute('position', new three.BufferAttribute(positions, 3));
+    geometry.setIndex(new three.BufferAttribute(new Uint16Array(indices), 1));
+
+    const material = new three.MeshBasicMaterial({
+      colorWrite: false,
+      depthTest: true,
+      depthWrite: true,
+      side: three.DoubleSide
+    });
+    const mesh = new three.Mesh(geometry, material);
+    mesh.renderOrder = 0;
+    mesh.frustumCulled = false;
+    tryOn.threeScene.add(mesh);
+    tryOn.faceOccluder = mesh;
+    tryOn.faceOccluderGeometry = geometry;
+    tryOn.faceOccluderTriangles = indices;
+  }
+
+  if (tryOn.faceOccluderWidth !== width || tryOn.faceOccluderHeight !== height) {
+    tryOn.faceOccluderInitialized = false;
+    tryOn.faceOccluderWidth = width;
+    tryOn.faceOccluderHeight = height;
+  }
+
+  const videoWidth = tryOn.video?.videoWidth || width;
+  const videoHeight = tryOn.video?.videoHeight || height;
+  const videoScale = Math.max(width / videoWidth, height / videoHeight);
+  const eyeDepth = ((landmarks[33]?.z || 0) + (landmarks[263]?.z || 0)) / 2;
+  const yaw = tryOn.smoothed?.yaw || 0;
+  const modelDepth = glassesModel.userData.baseDepth * glassesModel.scale.z;
+  const positions = tryOn.faceOccluderGeometry.attributes.position.array;
+  const initialized = tryOn.faceOccluderInitialized;
+
+  for (let index = 0; index < count; index += 1) {
+    const mapped = videoToStage(landmarks[index]);
+    const targetX = mapped.x - width / 2;
+    const targetY = height / 2 - mapped.y;
+    if (initialized) {
+      positions[index * 3] += (targetX - positions[index * 3]) * TRYON_SMOOTHING;
+      positions[index * 3 + 1] += (targetY - positions[index * 3 + 1]) * TRYON_SMOOTHING;
+    } else {
+      positions[index * 3] = targetX;
+      positions[index * 3 + 1] = targetY;
+    }
+  }
+
+  const getMaskPoint = (index) => ({
+    x: positions[index * 3] + width / 2,
+    y: height / 2 - positions[index * 3 + 1]
+  });
+  const screenLeftEye = getMaskPoint(263);
+  const screenRightEye = getMaskPoint(33);
+  const leftInnerEye = getMaskPoint(362);
+  const rightInnerEye = getMaskPoint(133);
+  const eyeCenterX = (
+    screenLeftEye.x + screenRightEye.x + leftInnerEye.x + rightInnerEye.x
+  ) / 4;
+  const eyeDistance = Math.max(
+    Math.hypot(screenRightEye.x - screenLeftEye.x, screenRightEye.y - screenLeftEye.y),
+    1
+  );
+  const templeDepthBias = Math.max(eyeDistance, modelDepth * 0.65);
+  const leftCheek = landmarks[234];
+  const rightCheek = landmarks[454];
+  const cheekDepthDifference = (leftCheek?.z || 0) - (rightCheek?.z || 0);
+  const nearCheek = getMaskPoint(cheekDepthDifference < 0 ? 234 : 454);
+  const cheekSide = Math.sign(nearCheek.x - eyeCenterX);
+  if (Math.abs(cheekDepthDifference) > 0.025 && cheekSide) {
+    tryOn.nearSideDirection = cheekSide;
+  } else if (!tryOn.nearSideDirection) {
+    tryOn.nearSideDirection = yaw >= 0 ? -1 : 1;
+  }
+  const nearSideDirection = tryOn.nearSideDirection;
+  updateVisibleTempleSide(glassesModel, yaw, nearSideDirection);
+  const turnStrength = Math.max(0, Math.min(1, (Math.abs(yaw) - 0.08) / 0.42));
+
+  for (let index = 0; index < count; index += 1) {
+    const point = landmarks[index];
+    const sideDistance = (positions[index * 3] + width / 2 - eyeCenterX) / eyeDistance;
+    const templeWeight = Math.max(0, Math.min(1, (Math.abs(sideDistance) - 0.4) / 0.5)) * turnStrength;
+    const nearSide = sideDistance * nearSideDirection > 0;
+    const pointDepth = Number.isFinite(point.z) ? point.z : eyeDepth;
+    const depth = (eyeDepth - pointDepth) * videoWidth * videoScale;
+    const depthBias = templeDepthBias * (nearSide ? -1 : 1) * templeWeight;
+    const targetDepth = depth + depthBias;
+    if (initialized) {
+      positions[index * 3 + 2] += (targetDepth - positions[index * 3 + 2]) * TRYON_SMOOTHING;
+    } else {
+      positions[index * 3 + 2] = targetDepth;
+    }
+  }
+
+  tryOn.faceOccluderInitialized = true;
+  const geometry = tryOn.faceOccluderGeometry;
+  const indexAttribute = geometry.index;
+  const triangleIndices = tryOn.faceOccluderTriangles;
+  const lensRadiusX = eyeDistance * 0.47;
+  const lensRadiusY = eyeDistance * 0.26;
+  const leftLensCenter = {
+    x: (screenLeftEye.x + leftInnerEye.x) / 2,
+    y: (screenLeftEye.y + leftInnerEye.y) / 2
+  };
+  const rightLensCenter = {
+    x: (screenRightEye.x + rightInnerEye.x) / 2,
+    y: (screenRightEye.y + rightInnerEye.y) / 2
+  };
+  const bridgePoint = getMaskPoint(6);
+  const protectedAreas = [
+    {
+      x: leftLensCenter.x,
+      y: leftLensCenter.y,
+      radiusX: lensRadiusX,
+      radiusY: lensRadiusY
+    },
+    {
+      x: rightLensCenter.x,
+      y: rightLensCenter.y,
+      radiusX: lensRadiusX,
+      radiusY: lensRadiusY
+    },
+    {
+      x: eyeCenterX,
+      y: bridgePoint.y,
+      radiusX: eyeDistance * 0.13,
+      radiusY: eyeDistance * 0.1
+    }
+  ];
+  const isInProtectedArea = (x, y) => protectedAreas.some((area) =>
+    ((x - area.x) / area.radiusX) ** 2 + ((y - area.y) / area.radiusY) ** 2 < 1
+  );
+  let visibleIndexCount = 0;
+  for (let index = 0; index < triangleIndices.length; index += 3) {
+    const a = triangleIndices[index];
+    const b = triangleIndices[index + 1];
+    const c = triangleIndices[index + 2];
+    const points = [a, b, c].map((pointIndex) => ({
+      x: positions[pointIndex * 3] + width / 2,
+      y: height / 2 - positions[pointIndex * 3 + 1]
+    }));
+    const centerX = (points[0].x + points[1].x + points[2].x) / 3;
+    const centerY = (points[0].y + points[1].y + points[2].y) / 3;
+    if (
+      points.some((point) => isInProtectedArea(point.x, point.y)) ||
+      isInProtectedArea(centerX, centerY)
+    ) continue;
+    indexAttribute.array[visibleIndexCount++] = a;
+    indexAttribute.array[visibleIndexCount++] = b;
+    indexAttribute.array[visibleIndexCount++] = c;
+  }
+
+  tryOn.faceOccluderGeometry.attributes.position.needsUpdate = true;
+  indexAttribute.needsUpdate = true;
+  geometry.setDrawRange(0, visibleIndexCount);
+  geometry.computeBoundingSphere();
+  tryOn.faceOccluder.visible = true;
 }
 
 function pickAngleKey(faceTurn) {
@@ -1139,24 +1458,54 @@ function pickAngleKey(faceTurn) {
 function drawGlasses(ctx, landmarks, width, height) {
   const leftEye = landmarks[33];
   const rightEye = landmarks[263];
-  const noseBridge = landmarks[168] || landmarks[6];
+  const leftEyeInner = landmarks[133] || leftEye;
+  const rightEyeInner = landmarks[362] || rightEye;
+  const noseBridge = landmarks[6] || landmarks[168];
   const noseTip = landmarks[1] || noseBridge;
   const leftCheek = landmarks[234];
   const rightCheek = landmarks[454];
   if (!leftEye || !rightEye || !noseBridge || !noseTip) return;
 
-  const eyeDistance = Math.hypot((rightEye.x - leftEye.x) * width, (rightEye.y - leftEye.y) * height);
-  const centerX = ((leftEye.x + rightEye.x) / 2) * width;
-  const centerY = noseBridge.y * height - eyeDistance * 0.08;
-  const targetWidth = eyeDistance * 2.18;
-  const rotation = Math.atan2((rightEye.y - leftEye.y) * height, (rightEye.x - leftEye.x) * width);
-  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
-  const faceWidth = leftCheek && rightCheek
-    ? Math.abs(rightCheek.x - leftCheek.x)
-    : Math.abs(rightEye.x - leftEye.x) * 2.2;
-  const faceTurn = (noseTip.x - eyeCenterX) / Math.max(faceWidth, 0.001);
-  const facePitch = noseBridge.y - eyeCenterY;
+  const videoToStage = (point) => {
+    const videoWidth = tryOn.video?.videoWidth || width;
+    const videoHeight = tryOn.video?.videoHeight || height;
+    const scale = Math.max(width / videoWidth, height / videoHeight);
+    const renderedWidth = videoWidth * scale;
+    const renderedHeight = videoHeight * scale;
+    const offsetX = (width - renderedWidth) / 2;
+    const offsetY = (height - renderedHeight) / 2;
+    return {
+      x: width - (offsetX + point.x * renderedWidth),
+      y: offsetY + point.y * renderedHeight
+    };
+  };
+
+  const left = videoToStage(rightEye);
+  const right = videoToStage(leftEye);
+  const leftInner = videoToStage(rightEyeInner);
+  const rightInner = videoToStage(leftEyeInner);
+  const bridge = videoToStage(noseBridge);
+  const tip = videoToStage(noseTip);
+  const leftCheekPoint = leftCheek ? videoToStage(leftCheek) : null;
+  const rightCheekPoint = rightCheek ? videoToStage(rightCheek) : null;
+
+  const eyeDistance = Math.hypot(right.x - left.x, right.y - left.y);
+  const eyeCenterX = ((left.x + right.x + leftInner.x + rightInner.x) / 4);
+  const eyeCenterY = ((left.y + right.y + leftInner.y + rightInner.y) / 4);
+  const centerX = eyeCenterX;
+  const centerY = eyeCenterY + (bridge.y - eyeCenterY) * 0.12;
+  const targetWidth = eyeDistance * GLASSES_EYE_SPAN_RATIO;
+  const rotation = Math.atan2(right.y - left.y, right.x - left.x);
+  const videoWidth = tryOn.video?.videoWidth || width;
+  const videoHeight = tryOn.video?.videoHeight || height;
+  const depthScale = Math.max(width / videoWidth, height / videoHeight) * videoWidth;
+  const leftEyeDepth = -(rightEye.z || 0) * depthScale;
+  const rightEyeDepth = -(leftEye.z || 0) * depthScale;
+  const yaw = -Math.atan2(rightEyeDepth - leftEyeDepth, Math.max(right.x - left.x, 1));
+  const faceWidth = leftCheekPoint && rightCheekPoint
+    ? Math.abs(rightCheekPoint.x - leftCheekPoint.x)
+    : eyeDistance * 2.2;
+  const faceTurn = (tip.x - eyeCenterX) / Math.max(faceWidth, 0.001);
   const angleKey = pickAngleKey(faceTurn);
   const overlay = tryOn.overlays[angleKey];
   const has3DModel = tryOn.modelReady && tryOn.glassesModel &&
@@ -1170,32 +1519,37 @@ function drawGlasses(ctx, landmarks, width, height) {
     w: targetWidth,
     h: targetHeight,
     rot: rotation,
-    yaw: Math.max(-0.65, Math.min(0.65, faceTurn * 4.5)),
-    pitch: Math.max(-0.45, Math.min(0.45, facePitch * 4.5))
+    yaw: Math.max(-0.65, Math.min(0.65, yaw)),
+    pitch: 0
   };
 
   // Suavização (interpolação exponencial) para evitar tremor entre frames.
-  const SMOOTHING = 0.35;
   if (!tryOn.smoothed) {
     tryOn.smoothed = { ...target };
   } else {
-    tryOn.smoothed.x += (target.x - tryOn.smoothed.x) * SMOOTHING;
-    tryOn.smoothed.y += (target.y - tryOn.smoothed.y) * SMOOTHING;
-    tryOn.smoothed.w += (target.w - tryOn.smoothed.w) * SMOOTHING;
-    tryOn.smoothed.h += (target.h - tryOn.smoothed.h) * SMOOTHING;
-    tryOn.smoothed.rot += (target.rot - tryOn.smoothed.rot) * SMOOTHING;
-    tryOn.smoothed.yaw += (target.yaw - tryOn.smoothed.yaw) * SMOOTHING;
-    tryOn.smoothed.pitch += (target.pitch - tryOn.smoothed.pitch) * SMOOTHING;
+    tryOn.smoothed.x += (target.x - tryOn.smoothed.x) * TRYON_SMOOTHING;
+    tryOn.smoothed.y += (target.y - tryOn.smoothed.y) * TRYON_SMOOTHING;
+    tryOn.smoothed.w += (target.w - tryOn.smoothed.w) * TRYON_SMOOTHING;
+    tryOn.smoothed.h += (target.h - tryOn.smoothed.h) * TRYON_SMOOTHING;
+    tryOn.smoothed.rot += (target.rot - tryOn.smoothed.rot) * TRYON_SMOOTHING;
+    tryOn.smoothed.yaw += (target.yaw - tryOn.smoothed.yaw) * TRYON_SMOOTHING;
+    tryOn.smoothed.pitch += (target.pitch - tryOn.smoothed.pitch) * TRYON_SMOOTHING;
   }
   const s = tryOn.smoothed;
 
   if (has3DModel) {
     const model = tryOn.glassesModel;
-    const scale = s.w / model.userData.baseWidth;
+    const scale = (s.w * 0.88) / model.userData.baseWidth;
+    const smoothedEyeDistance = s.w / GLASSES_EYE_SPAN_RATIO;
     model.visible = true;
     model.scale.setScalar(scale);
-    model.position.set(s.x - width / 2, height / 2 - s.y, 0);
+    model.position.set(
+      s.x - width / 2,
+      height / 2 - s.y,
+      smoothedEyeDistance * 0.08
+    );
     model.rotation.set(s.pitch, s.yaw, -s.rot);
+    updateFaceOccluder(landmarks, width, height, videoToStage);
     tryOn.threeRenderer.render(tryOn.threeScene, tryOn.threeCamera);
     return;
   }
@@ -1228,18 +1582,10 @@ function capturePhoto() {
   shotCtx.drawImage(video, 0, 0, shot.width, shot.height);
   shotCtx.restore();
   if (canvas.width === shot.width && canvas.height === shot.height) {
-    shotCtx.save();
-    shotCtx.translate(shot.width, 0);
-    shotCtx.scale(-1, 1);
     shotCtx.drawImage(canvas, 0, 0);
-    shotCtx.restore();
   }
   if (tryOn.threeCanvas && tryOn.modelReady) {
-    shotCtx.save();
-    shotCtx.translate(shot.width, 0);
-    shotCtx.scale(-1, 1);
     shotCtx.drawImage(tryOn.threeCanvas, 0, 0, shot.width, shot.height);
-    shotCtx.restore();
   }
   shot.toBlob((blob) => {
     if (!blob) {
